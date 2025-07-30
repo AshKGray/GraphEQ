@@ -6,6 +6,7 @@ struct MathSolverView: View {
     @State private var isLoading = false
     @State private var showingSolution = false
     @State private var chatHistory: [ChatMessage] = []
+    @State private var showInputAfterSolution = false
     
     var body: some View {
         ZStack {
@@ -16,14 +17,17 @@ struct MathSolverView: View {
                 // Header
                 headerView
                 
-                // Chat History Area
-                chatHistoryView
+                // Main Content Area
+                mainContentView
                 
-                // Bottom Input Area (like iPhone Messages)
-                bottomInputView
+                // Bottom Input Area (only shown after solution)
+                if showInputAfterSolution {
+                    bottomInputView
+                }
             }
         }
         .animation(.easeInOut(duration: 0.3), value: isLoading)
+        .animation(.easeInOut(duration: 0.3), value: showInputAfterSolution)
     }
     
     // MARK: - Header View
@@ -47,12 +51,96 @@ struct MathSolverView: View {
             Button("Clear") {
                 chatHistory.removeAll()
                 solution = ""
+                mathProblem = ""
+                showInputAfterSolution = false
             }
             .foregroundColor(.cyan)
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 10)
         .background(Color.black)
+    }
+    
+    // MARK: - Main Content View
+    private var mainContentView: some View {
+        VStack(spacing: 0) {
+            if chatHistory.isEmpty {
+                // Initial state - show problem input
+                initialInputView
+            } else {
+                // Show chat history with solutions
+                chatHistoryView
+            }
+        }
+    }
+    
+    // MARK: - Initial Input View
+    private var initialInputView: some View {
+        VStack(spacing: 20) {
+            Spacer()
+            
+            Text("Enter a Math Problem")
+                .font(.title2)
+                .fontWeight(.bold)
+                .foregroundColor(.cyan)
+                .glow(color: .cyan, radius: 2)
+            
+            VStack(spacing: 16) {
+                // Quick symbols row
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        ForEach(quickSymbols, id: \.self) { symbol in
+                            Button(symbol) {
+                                mathProblem += symbol
+                            }
+                            .font(.title2)
+                            .foregroundColor(.cyan)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.gray.opacity(0.2))
+                            .cornerRadius(8)
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                }
+                
+                // Problem input field
+                TextField("Enter a math problem to solve step by step...", text: $mathProblem, axis: .vertical)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .foregroundColor(.white)
+                    .background(Color.gray.opacity(0.2))
+                    .cornerRadius(12)
+                    .lineLimit(1...4)
+                    .padding(.horizontal, 16)
+                
+                // Solve button
+                Button(action: solveProblem) {
+                    if isLoading {
+                        HStack {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .black))
+                                .scaleEffect(0.8)
+                            Text("Solving...")
+                                .foregroundColor(.black)
+                                .fontWeight(.semibold)
+                        }
+                    } else {
+                        Text("Solve Step by Step")
+                            .foregroundColor(.black)
+                            .fontWeight(.semibold)
+                    }
+                }
+                .frame(height: 50)
+                .frame(maxWidth: .infinity)
+                .background(isLoading ? Color.gray : Color.cyan)
+                .cornerRadius(12)
+                .disabled(mathProblem.isEmpty || isLoading)
+                .padding(.horizontal, 16)
+            }
+            
+            Spacer()
+        }
+        .padding(.vertical, 20)
     }
     
     // MARK: - Chat History View
@@ -180,7 +268,7 @@ struct MathSolverView: View {
         return steps
     }
     
-    // MARK: - Bottom Input View
+    // MARK: - Bottom Input View (only shown after solution)
     private var bottomInputView: some View {
         VStack(spacing: 0) {
             // Quick symbols row
@@ -204,7 +292,7 @@ struct MathSolverView: View {
             
             // Input field and send button
             HStack(spacing: 12) {
-                TextField("Enter a math problem...", text: $mathProblem, axis: .vertical)
+                TextField("Edit problem and solve again...", text: $mathProblem, axis: .vertical)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
                     .foregroundColor(.white)
                     .background(Color.gray.opacity(0.2))
@@ -265,6 +353,11 @@ struct MathSolverView: View {
                     )
                     chatHistory.append(aiMessage)
                     
+                    // Show input after solution is displayed
+                    withAnimation(.easeInOut(duration: 0.5)) {
+                        showInputAfterSolution = true
+                    }
+                    
                 case .failure(let error):
                     let errorMessage = ChatMessage(
                         content: "Error: \(error.localizedDescription)",
@@ -272,9 +365,12 @@ struct MathSolverView: View {
                         timestamp: formatTimestamp(Date())
                     )
                     chatHistory.append(errorMessage)
+                    
+                    // Show input even if there's an error
+                    withAnimation(.easeInOut(duration: 0.5)) {
+                        showInputAfterSolution = true
+                    }
                 }
-                
-                mathProblem = ""
             }
         }
     }
