@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MathSolverView: View {
     @State private var mathProblem = ""
+    @State private var originalProblem = "" // Store the original problem
     @State private var solution = ""
     @State private var isLoading = false
     @State private var showingSolution = false
@@ -52,6 +53,7 @@ struct MathSolverView: View {
                 chatHistory.removeAll()
                 solution = ""
                 mathProblem = ""
+                originalProblem = ""
                 showInputAfterSolution = false
             }
             .foregroundColor(.cyan)
@@ -330,6 +332,9 @@ struct MathSolverView: View {
     private func solveProblem() {
         guard !mathProblem.isEmpty else { return }
         
+        // Store the original problem before solving
+        originalProblem = mathProblem
+        
         let userMessage = ChatMessage(
             content: mathProblem,
             isUser: true,
@@ -353,6 +358,9 @@ struct MathSolverView: View {
                     )
                     chatHistory.append(aiMessage)
                     
+                    // Restore the original problem in the input field
+                    mathProblem = originalProblem
+                    
                     // Show input after solution is displayed
                     withAnimation(.easeInOut(duration: 0.5)) {
                         showInputAfterSolution = true
@@ -365,6 +373,9 @@ struct MathSolverView: View {
                         timestamp: formatTimestamp(Date())
                     )
                     chatHistory.append(errorMessage)
+                    
+                    // Restore the original problem in the input field even if there's an error
+                    mathProblem = originalProblem
                     
                     // Show input even if there's an error
                     withAnimation(.easeInOut(duration: 0.5)) {
