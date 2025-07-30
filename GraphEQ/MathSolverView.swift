@@ -1,7 +1,8 @@
 import SwiftUI
 
 struct MathSolverView: View {
-    @State private var mathProblem = ""
+    @State private var initialProblem = "" // For the initial input
+    @State private var bottomProblem = "" // For the bottom input after solution
     @State private var originalProblem = "" // Store the original problem
     @State private var solution = ""
     @State private var isLoading = false
@@ -52,7 +53,8 @@ struct MathSolverView: View {
             Button("Clear") {
                 chatHistory.removeAll()
                 solution = ""
-                mathProblem = ""
+                initialProblem = ""
+                bottomProblem = ""
                 originalProblem = ""
                 showInputAfterSolution = false
             }
@@ -93,7 +95,7 @@ struct MathSolverView: View {
                     HStack(spacing: 12) {
                         ForEach(quickSymbols, id: \.self) { symbol in
                             Button(symbol) {
-                                mathProblem += symbol
+                                initialProblem += symbol
                             }
                             .font(.title2)
                             .foregroundColor(.cyan)
@@ -107,7 +109,7 @@ struct MathSolverView: View {
                 }
                 
                 // Problem input field
-                TextField("Enter a math problem to solve step by step...", text: $mathProblem, axis: .vertical)
+                TextField("Enter a math problem to solve step by step...", text: $initialProblem, axis: .vertical)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
                     .foregroundColor(.white)
                     .background(Color.gray.opacity(0.2))
@@ -116,7 +118,7 @@ struct MathSolverView: View {
                     .padding(.horizontal, 16)
                 
                 // Solve button
-                Button(action: solveProblem) {
+                Button(action: solveInitialProblem) {
                     if isLoading {
                         HStack {
                             ProgressView()
@@ -136,7 +138,7 @@ struct MathSolverView: View {
                 .frame(maxWidth: .infinity)
                 .background(isLoading ? Color.gray : Color.cyan)
                 .cornerRadius(12)
-                .disabled(mathProblem.isEmpty || isLoading)
+                .disabled(initialProblem.isEmpty || isLoading)
                 .padding(.horizontal, 16)
             }
             
@@ -278,7 +280,7 @@ struct MathSolverView: View {
                 HStack(spacing: 12) {
                     ForEach(quickSymbols, id: \.self) { symbol in
                         Button(symbol) {
-                            mathProblem += symbol
+                            bottomProblem += symbol
                         }
                         .font(.title2)
                         .foregroundColor(.cyan)
@@ -294,14 +296,14 @@ struct MathSolverView: View {
             
             // Input field and send button
             HStack(spacing: 12) {
-                TextField("Edit problem and solve again...", text: $mathProblem, axis: .vertical)
+                TextField("Edit problem and solve again...", text: $bottomProblem, axis: .vertical)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
                     .foregroundColor(.white)
                     .background(Color.gray.opacity(0.2))
                     .cornerRadius(12)
                     .lineLimit(1...4)
                 
-                Button(action: solveProblem) {
+                Button(action: solveBottomProblem) {
                     if isLoading {
                         ProgressView()
                             .progressViewStyle(CircularProgressViewStyle(tint: .cyan))
@@ -315,7 +317,7 @@ struct MathSolverView: View {
                 .frame(width: 60, height: 44)
                 .background(isLoading ? Color.gray : Color.cyan)
                 .cornerRadius(12)
-                .disabled(mathProblem.isEmpty || isLoading)
+                .disabled(bottomProblem.isEmpty || isLoading)
             }
             .padding(.horizontal, 16)
             .padding(.bottom, 16)
@@ -328,15 +330,15 @@ struct MathSolverView: View {
         "√", "²", "³", "⁴", "⁵", "×", "÷", "π", "∞", "∫", "d/dx", "ln", "sin", "cos", "tan", "(", ")", "+", "-", "="
     ]
     
-    // MARK: - Solve Problem
-    private func solveProblem() {
-        guard !mathProblem.isEmpty else { return }
+    // MARK: - Solve Initial Problem
+    private func solveInitialProblem() {
+        guard !initialProblem.isEmpty else { return }
         
         // Store the original problem before solving
-        originalProblem = mathProblem
+        originalProblem = initialProblem
         
         let userMessage = ChatMessage(
-            content: mathProblem,
+            content: initialProblem,
             isUser: true,
             timestamp: formatTimestamp(Date())
         )
@@ -345,7 +347,7 @@ struct MathSolverView: View {
         
         isLoading = true
         
-        MathSolverService.shared.solveMathProblem(mathProblem) { result in
+        MathSolverService.shared.solveMathProblem(initialProblem) { result in
             DispatchQueue.main.async {
                 isLoading = false
                 
@@ -358,8 +360,8 @@ struct MathSolverView: View {
                     )
                     chatHistory.append(aiMessage)
                     
-                    // Restore the original problem in the input field
-                    mathProblem = originalProblem
+                    // Set the bottom problem to the original problem
+                    bottomProblem = originalProblem
                     
                     // Show input after solution is displayed
                     withAnimation(.easeInOut(duration: 0.5)) {
@@ -374,13 +376,60 @@ struct MathSolverView: View {
                     )
                     chatHistory.append(errorMessage)
                     
-                    // Restore the original problem in the input field even if there's an error
-                    mathProblem = originalProblem
+                    // Set the bottom problem to the original problem even if there's an error
+                    bottomProblem = originalProblem
                     
                     // Show input even if there's an error
                     withAnimation(.easeInOut(duration: 0.5)) {
                         showInputAfterSolution = true
                     }
+                }
+            }
+        }
+    }
+    
+    // MARK: - Solve Bottom Problem
+    private func solveBottomProblem() {
+        guard !bottomProblem.isEmpty else { return }
+        
+        // Store the original problem before solving
+        originalProblem = bottomProblem
+        
+        let userMessage = ChatMessage(
+            content: bottomProblem,
+            isUser: true,
+            timestamp: formatTimestamp(Date())
+        )
+        
+        chatHistory.append(userMessage)
+        
+        isLoading = true
+        
+        MathSolverService.shared.solveMathProblem(bottomProblem) { result in
+            DispatchQueue.main.async {
+                isLoading = false
+                
+                switch result {
+                case .success(let solution):
+                    let aiMessage = ChatMessage(
+                        content: solution,
+                        isUser: false,
+                        timestamp: formatTimestamp(Date())
+                    )
+                    chatHistory.append(aiMessage)
+                    
+                    // Keep the problem in the bottom input for further editing
+                    // Don't clear it - let user edit and re-solve
+                    
+                case .failure(let error):
+                    let errorMessage = ChatMessage(
+                        content: "Error: \(error.localizedDescription)",
+                        isUser: false,
+                        timestamp: formatTimestamp(Date())
+                    )
+                    chatHistory.append(errorMessage)
+                    
+                    // Keep the problem in the bottom input even if there's an error
                 }
             }
         }
