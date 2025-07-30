@@ -30,15 +30,19 @@ struct GraphView: View {
                     // MARK: - Drawing Gesture
                     DragGesture(minimumDistance: 0) // Allows for single taps to register too
                         .onChanged { value in
+                            print("🎯 Drag gesture changed - isDrawingMode: \(viewModel.isDrawingMode)")
                             if viewModel.isDrawingMode {
                                 // Add new point to drawnPoints, converting from view coordinates to graph coordinates
                                 let graphPoint = viewToGraph(point: value.location, in: viewSize)
+                                print("✏️ Drawing point at graph coordinates: \(graphPoint)")
                                 if let lastPoint = viewModel.drawnPoints.last,
                                    distance(from: lastPoint, to: graphPoint) < 0.1 {
                                     // Avoid adding duplicate points if very close
+                                    print("⏭️ Skipping duplicate point")
                                     return
                                 }
                                 viewModel.drawnPoints.append(graphPoint)
+                                print("✅ Added point. Total drawn points: \(viewModel.drawnPoints.count)")
                                 
                                 // Trigger real-time equation generation
                                 if viewModel.drawnPoints.count > 2 {
@@ -46,14 +50,17 @@ struct GraphView: View {
                                 }
                             } else {
                                 // Panning gesture for typing mode
+                                print("🖱️ Panning gesture")
                                 currentTranslation = value.translation
                                 viewModel.translation = currentTranslation
                                 viewModel.updateGraphRanges(viewSize: viewSize)
                             }
                         }
                         .onEnded { value in
+                            print("🎯 Drag gesture ended - isDrawingMode: \(viewModel.isDrawingMode)")
                             if viewModel.isDrawingMode {
                                 // When drawing ends, finalize the curve fitting
+                                print("✏️ Drawing ended with \(viewModel.drawnPoints.count) points")
                                 if viewModel.drawnPoints.count > 2 {
                                     viewModel.fitCurveToDrawnPoints()
                                 }

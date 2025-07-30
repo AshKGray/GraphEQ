@@ -31,13 +31,16 @@ class GraphViewModel: ObservableObject {
     /// A boolean indicating whether the app is in drawing mode (`true`) or typing mode (`false`).
     @Published var isDrawingMode: Bool = false {
         didSet {
+            print("🎨 Drawing mode changed from \(oldValue) to \(isDrawingMode)")
             if isDrawingMode {
                 // Clear expression when entering drawing mode, ready for a new draw
                 mathExpression = ""
                 // Also clear any previous drawing points for a fresh start
                 drawnPoints = []
+                print("✏️ Entered drawing mode - cleared expression and drawn points")
             } else {
                 // Re-evaluate the graph based on the current expression when switching back to typing mode
+                print("⌨️ Entered typing mode - will parse expression")
                 parseAndPlotExpression()
             }
         }
@@ -61,11 +64,14 @@ class GraphViewModel: ObservableObject {
     /// Stores the raw points captured during a freehand drawing gesture.
     @Published var drawnPoints: [CGPoint] = [] {
         didSet {
+            print("📊 Drawn points changed: \(oldValue.count) -> \(drawnPoints.count)")
             // If in drawing mode and points are added/changed, try to fit a curve and update expression
             if isDrawingMode && !drawnPoints.isEmpty {
+                print("🎯 In drawing mode with points - will fit curve")
                 fitCurveToDrawnPoints()
             } else if isDrawingMode && drawnPoints.isEmpty {
                 // If drawn points are cleared in drawing mode, clear expression too
+                print("🗑️ Cleared drawn points in drawing mode")
                 mathExpression = ""
                 dataPoints = []
             }
@@ -85,7 +91,7 @@ class GraphViewModel: ObservableObject {
     @Published var selectedTab: InputTab = .symbols
     
     /// Whether to show the symbols popup.
-    @Published var showSymbolsPopup: Bool = false
+
 
     // MARK: - Internal State for Graph View
 
@@ -142,15 +148,20 @@ class GraphViewModel: ObservableObject {
 
     /// Resets the graph view to its default scale, translation, and clears drawing/expression.
     func resetView() {
-        mathExpression = "sin(x)" // Default expression
+        mathExpression = "" // Clear expression first
         drawnPoints = []
         isDrawingMode = false // Ensure we are back in typing mode
         translation = .zero
         scale = 1.0
         xRange = -5.0...5.0
         yRange = -5.0...5.0
+        xMin = -5.0
+        xMax = 5.0
+        yMin = -5.0
+        yMax = 5.0
         errorMessage = nil
-        parseAndPlotExpression() // Re-parse the default expression
+        dataPoints = [] // Clear the graph
+        print("🔄 View reset - cleared expression and data points")
     }
 
     /// Updates the graph ranges based on current scale and translation.
@@ -246,6 +257,7 @@ class GraphViewModel: ObservableObject {
             return
         }
 
+        print("🔍 Parsing expression: '\(mathExpression)'")
         var points: [CGPoint] = []
         
         // Determine a reasonable X range for plotting based on current view range
@@ -253,29 +265,45 @@ class GraphViewModel: ObservableObject {
         let plotXMax = xRange.upperBound
         let rangeWidth = plotXMax - plotXMin
         
-        // Use more points when zoomed out to ensure smooth curves
+        // Ensure we always have enough points for smooth curves
+        let minSamples: Int = 100
+        let maxSamples: Int = 500
         let baseSamples: Int = 200
-        let zoomFactor = max(1.0, rangeWidth / 10.0) // More points for wider ranges
-        let numSamples: Int = Int(Double(baseSamples) * zoomFactor)
+        
+        // Calculate number of samples based on range width
+        let zoomFactor = max(0.5, min(2.0, rangeWidth / 10.0)) // Clamp zoom factor
+        let numSamples: Int = max(minSamples, min(maxSamples, Int(Double(baseSamples) * zoomFactor)))
+        
         let xStep = rangeWidth / CGFloat(numSamples - 1)
 
-        // Use Expression library for robust parsing
+        print("📊 Plotting range: \(plotXMin) to \(plotXMax), samples: \(numSamples)")
+
         for i in 0..<numSamples {
             let x = plotXMin + CGFloat(i) * xStep
             
             do {
+                // Create expression with x value as a constant - math symbols are included by default
                 let expression = Expression(mathExpression, constants: ["x": Double(x)])
                 let y = try expression.evaluate()
                 
-                if y.isFinite {
+                if y.isFinite && !y.isNaN {
                     points.append(CGPoint(x: x, y: CGFloat(y)))
                 }
             } catch {
+                print("❌ Error evaluating at x=\(x): \(error)")
                 // Skip this point if evaluation fails
                 continue
             }
         }
+        
+        print("✅ Generated \(points.count) valid points")
         dataPoints = points
+        
+        // If no valid points were generated, show an error
+        if points.isEmpty {
+            errorMessage = "No valid points generated. Check your expression."
+            print("⚠️ No valid points generated for expression: '\(mathExpression)'")
+        }
     }
     
     /// Parses 3D expressions (z = f(x,y)) and populates `dataPoints3D`.

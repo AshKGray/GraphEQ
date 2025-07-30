@@ -9,6 +9,8 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject var viewModel: GraphViewModel
+    @State private var showAIAssistant: Bool = false
+    @State private var showMathSolver: Bool = false
     
     var body: some View {
         ZStack {
@@ -37,6 +39,12 @@ struct ContentView: View {
                 .frame(height: 300) // Increased height to ensure all content is visible
             }
         }
+        .sheet(isPresented: $showAIAssistant) {
+            AIAssistantView()
+        }
+        .sheet(isPresented: $showMathSolver) {
+            MathSolverView()
+        }
     }
     
     // MARK: - App Header
@@ -59,6 +67,16 @@ struct ContentView: View {
                 
                 Button("Save") {
                     // TODO: Implement save functionality
+                }
+                .buttonStyle(HeaderButtonStyle())
+                
+                Button("Math") {
+                    showMathSolver = true
+                }
+                .buttonStyle(HeaderButtonStyle())
+                
+                Button("AI") {
+                    showAIAssistant = true
                 }
                 .buttonStyle(HeaderButtonStyle())
             }
@@ -156,33 +174,8 @@ struct ContentView: View {
     
     // MARK: - Equation Display
     private var equationDisplay: some View {
-        HStack {
-            Text("Equation:")
-                .font(.caption)
-                .foregroundColor(.gray)
-                .textCase(.uppercase)
-                .tracking(1)
-            
-            TextField(viewModel.is3DMode ? "z = " : "y = ", text: $viewModel.mathExpression)
-                .font(.system(size: 16, weight: .semibold, design: .monospaced))
-                .foregroundColor(.pink)
-                .textFieldStyle(PlainTextFieldStyle())
-                .onChange(of: viewModel.mathExpression) { oldValue, newValue in
-                    if !viewModel.isDrawingMode {
-                        viewModel.parseAndPlotExpression()
-                    }
-                }
-            
-            Spacer()
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
-        .background(Color(red: 0.067, green: 0.067, blue: 0.067))
-        .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(Color(red: 0.267, green: 0.267, blue: 0.267), lineWidth: 1)
-        )
-        .padding(.horizontal, 16)
+        InputView()
+            .environmentObject(viewModel)
     }
     
     // MARK: - Input Section
@@ -230,38 +223,29 @@ struct ContentView: View {
     
     // MARK: - Symbols Tab
     private var symbolsTab: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 12) {
             HStack {
-                Text("Quick Symbols")
+                Text("Math Symbols")
                     .font(.caption)
                     .foregroundColor(.gray)
                     .textCase(.uppercase)
                     .tracking(1)
                 
                 Spacer()
-                
-                Button("All Symbols") {
-                    viewModel.showSymbolsPopup = true
-                }
-                .buttonStyle(SymbolsToggleStyle())
             }
             
-            // Quick symbols row
-            HStack(spacing: 8) {
-                ForEach(Array(MathSymbol.allCases.prefix(8)), id: \.self) { symbol in
+            // All symbols in a compact grid
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 8), spacing: 6) {
+                ForEach(MathSymbol.allCases, id: \.self) { symbol in
                     Button(symbol.display) {
                         viewModel.insertSymbol(symbol)
                     }
-                    .buttonStyle(QuickSymbolButtonStyle())
+                    .buttonStyle(InlineSymbolButtonStyle())
                 }
             }
         }
         .padding(.horizontal, 16)
         .padding(.bottom, 8)
-        .sheet(isPresented: $viewModel.showSymbolsPopup) {
-            SymbolsPopupView()
-                .environmentObject(viewModel)
-        }
     }
     
     // MARK: - Axis Tab
@@ -507,6 +491,26 @@ struct QuickSymbolButtonStyle: ButtonStyle {
             .scaleEffect(configuration.isPressed ? 1.1 : 1.0)
             .shadow(color: .white.opacity(0.3), radius: 2)
             .animation(.easeInOut(duration: 0.2), value: configuration.isPressed)
+    }
+}
+
+struct InlineSymbolButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 16, weight: .medium))
+            .foregroundColor(.white)
+            .frame(width: 36, height: 36)
+            .background(
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(Color(red: 0.15, green: 0.15, blue: 0.15))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(Color(red: 0.4, green: 0.4, blue: 0.4), lineWidth: 1)
+                    )
+            )
+            .scaleEffect(configuration.isPressed ? 0.95 : 1.0)
+            .shadow(color: .cyan.opacity(0.2), radius: 1)
+            .animation(.easeInOut(duration: 0.1), value: configuration.isPressed)
     }
 }
 
