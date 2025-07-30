@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		A157B5AF2E397A6900DC46B4 /* Expression in Frameworks */ = {isa = PBXBuildFile; productRef = A157B5AE2E397A6900DC46B4 /* Expression */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		A157B54A2E3611F600DC46B4 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -52,6 +56,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A157B5AF2E397A6900DC46B4 /* Expression in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -112,6 +117,7 @@
 			);
 			name = GraphEQ;
 			packageProductDependencies = (
+				A157B5AE2E397A6900DC46B4 /* Expression */,
 			);
 			productName = GraphEQ;
 			productReference = A157B53C2E3611F500DC46B4 /* GraphEQ.app */;
@@ -195,6 +201,9 @@
 			);
 			mainGroup = A157B5332E3611F500DC46B4;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				A157B5AD2E397A6900DC46B4 /* XCRemoteSwiftPackageReference "Expression" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = A157B53D2E3611F500DC46B4 /* Products */;
 			projectDirPath = "";
@@ -395,9 +404,9 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = D4E729RC4M;
+				DEVELOPMENT_TEAM = "";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -412,6 +421,7 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ashkgray.GraphEQ;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -558,6 +568,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		A157B5AD2E397A6900DC46B4 /* XCRemoteSwiftPackageReference "Expression" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/nicklockwood/Expression";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.13.9;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		A157B5AE2E397A6900DC46B4 /* Expression */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A157B5AD2E397A6900DC46B4 /* XCRemoteSwiftPackageReference "Expression" */;
+			productName = Expression;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = A157B5342E3611F500DC46B4 /* Project object */;
 }

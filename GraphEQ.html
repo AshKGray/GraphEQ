@@ -1,0 +1,1131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Graphing App Wireframe</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #000;
+            color: #fff;
+            padding: 20px;
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility;
+        }
+        
+        .phone-container {
+            width: 375px;
+            height: auto;
+            min-height: 812px;
+            margin: 0 auto;
+            background: #000;
+            border: 3px solid #333;
+            border-radius: 25px;
+            position: relative;
+            overflow: visible;
+        }
+        
+        .status-bar {
+            height: 44px;
+            background: #000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #00ff88;
+        }
+        
+        .app-header {
+            height: 60px;
+            background: #111;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            border-bottom: 1px solid #333;
+        }
+        
+        .app-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #00ffff;
+            text-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
+        }
+        
+        .header-buttons {
+            display: flex;
+            gap: 12px;
+        }
+        
+        .header-btn {
+            background: #222;
+            border: 1px solid #ff6b35;
+            color: #ff6b35;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .header-btn:hover {
+            background: #ff6b35;
+            color: #000;
+        }
+        
+        .graph-container {
+            height: 400px;
+            margin: 16px;
+            background: #111;
+            border: 2px solid #444;
+            border-radius: 12px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .graph-canvas {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            image-rendering: -webkit-crisp-edges;
+            image-rendering: crisp-edges;
+        }
+        
+        .drawing-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 3;
+            cursor: crosshair;
+            image-rendering: -webkit-crisp-edges;
+            image-rendering: crisp-edges;
+        }
+        
+        .three-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 2;
+            display: none;
+        }
+        
+        .graph-mode-tabs {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            display: flex;
+            background: rgba(34, 34, 34, 0.9);
+            border-radius: 8px;
+            padding: 2px;
+            z-index: 4;
+        }
+        
+        .graph-mode-tab {
+            padding: 6px 10px;
+            font-size: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.2s;
+            color: #888;
+        }
+        
+        .graph-mode-tab.active {
+            background: #00ffff;
+            color: #000;
+        }
+        
+        .zoom-controls {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            display: flex;
+            gap: 4px;
+            z-index: 4;
+        }
+        
+        .zoom-btn {
+            width: 32px;
+            height: 32px;
+            background: #222;
+            border: 1px solid #00ffff;
+            color: #00ffff;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .equation-display {
+            margin: 16px;
+            background: #111;
+            border: 2px solid #444;
+            border-radius: 12px;
+            padding: 16px;
+            min-height: 60px;
+        }
+        
+        .equation-label {
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .equation-text {
+            font-size: 20px;
+            font-family: 'SF Mono', 'Monaco', 'Menlo', 'Courier New', monospace;
+            color: #ff4477;
+            font-weight: 600;
+            min-height: 25px;
+            text-shadow: 0 0 6px rgba(255, 68, 119, 0.4);
+            letter-spacing: 0.5px;
+        }
+        
+        .input-section {
+            margin: 16px;
+            background: #111;
+            border: 2px solid #444;
+            border-radius: 12px;
+            padding: 16px;
+        }
+        
+        .input-tabs {
+            display: flex;
+            margin-bottom: 16px;
+            background: #222;
+            border-radius: 8px;
+            padding: 4px;
+        }
+        
+        .tab {
+            flex: 1;
+            text-align: center;
+            padding: 10px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+        
+        .tab.active {
+            background: #ff6b35;
+            color: #000;
+        }
+        
+        .tab:not(.active) {
+            color: #888;
+        }
+        
+        .equation-input-container {
+            position: relative;
+        }
+        
+        .equation-input {
+            width: 100%;
+            background: #222;
+            border: 2px solid #666;
+            color: #00ffff;
+            padding: 14px;
+            border-radius: 8px;
+            font-size: 18px;
+            font-family: 'SF Mono', 'Monaco', 'Menlo', 'Courier New', monospace;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+        }
+        
+        .equation-input::placeholder {
+            color: #666;
+        }
+        
+        .math-symbols-panel {
+            background: #1a1a1a;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 12px;
+            border: 1px solid #444;
+        }
+        
+        .symbols-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        
+        .symbols-title {
+            font-size: 11px;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .symbols-toggle {
+            background: none;
+            border: 1px solid #666;
+            color: #00ffff;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            cursor: pointer;
+        }
+        
+        .symbols-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 6px;
+            max-height: 120px;
+            overflow-y: auto;
+        }
+        
+        .symbols-grid.collapsed {
+            max-height: 60px;
+        }
+        
+        .symbol-btn {
+            background: #333;
+            border: 1px solid #555;
+            color: #fff;
+            padding: 8px 4px;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 32px;
+        }
+        
+        .symbol-btn:hover {
+            background: #00ffff;
+            color: #000;
+            transform: scale(1.1);
+        }
+        
+        .symbol-btn.special {
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .axis-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 12px;
+        }
+        
+        .axis-input-group {
+            background: #222;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #555;
+        }
+        
+        .axis-label {
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 6px;
+            display: block;
+        }
+        
+        .axis-input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            color: #00ff88;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        
+        .drawing-indicator {
+            position: absolute;
+            top: 48px;
+            left: 8px;
+            background: rgba(255, 51, 102, 0.1);
+            border: 1px solid #ff3366;
+            color: #ff3366;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            z-index: 4;
+        }
+        
+        .mode-toggle {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: #222;
+            border: 1px solid #00ffff;
+            color: #00ffff;
+            padding: 6px 10px;
+            border-radius: 8px;
+            font-size: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            z-index: 4;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+        
+        .three-controls {
+            position: absolute;
+            bottom: 50px;
+            right: 8px;
+            display: none;
+            flex-direction: column;
+            gap: 4px;
+            z-index: 4;
+        }
+        
+        .three-controls.active {
+            display: flex;
+        }
+        
+        .control-btn {
+            width: 32px;
+            height: 32px;
+            background: #222;
+            border: 1px solid #ff6b35;
+            color: #ff6b35;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .equation-preview {
+            background: #1a1a1a;
+            border: 1px solid #444;
+            border-radius: 6px;
+            padding: 8px;
+            margin-top: 8px;
+            font-family: 'SF Mono', 'Monaco', 'Menlo', 'Courier New', monospace;
+            font-size: 14px;
+            color: #00ffff;
+            min-height: 30px;
+            display: flex;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="phone-container">
+        <!-- Status Bar -->
+        <div class="status-bar">
+            <span>9:41</span>
+            <span>●●●●●</span>
+            <span>100%</span>
+        </div>
+        
+        <!-- App Header -->
+        <div class="app-header">
+            <div class="app-title">GraphIt Pro</div>
+            <div class="header-buttons">
+                <button class="header-btn" onclick="clearGraph()">Clear</button>
+                <button class="header-btn">Save</button>
+            </div>
+        </div>
+        
+        <!-- Graph Container -->
+        <div class="graph-container">
+            <div class="graph-mode-tabs">
+                <div class="graph-mode-tab active" onclick="switchGraphMode('2d')">2D</div>
+                <div class="graph-mode-tab" onclick="switchGraphMode('3d')">3D</div>
+            </div>
+            
+            <canvas class="graph-canvas" id="graphCanvas"></canvas>
+            <canvas class="drawing-canvas" id="drawingCanvas"></canvas>
+            <div id="threeContainer" class="three-canvas"></div>
+            
+            <div class="drawing-indicator" id="drawingIndicator">Drawing Mode</div>
+            <button class="mode-toggle" onclick="toggleMode()">Draw</button>
+            
+            <div class="zoom-controls">
+                <button class="zoom-btn" onclick="zoom(-1)">-</button>
+                <button class="zoom-btn" onclick="zoom(1)">+</button>
+            </div>
+            
+            <div class="three-controls" id="threeControls">
+                <button class="control-btn" onclick="rotate3D('x')">↻X</button>
+                <button class="control-btn" onclick="rotate3D('y')">↻Y</button>
+                <button class="control-btn" onclick="rotate3D('z')">↻Z</button>
+                <button class="control-btn" onclick="reset3D()">⌂</button>
+            </div>
+        </div>
+        
+        <!-- Real-time Equation Display -->
+        <div class="equation-display">
+            <div class="equation-label">Generated/Current Equation</div>
+            <div class="equation-text" id="equationDisplay">y = 0</div>
+        </div>
+        
+        <!-- Input Section -->
+        <div class="input-section">
+            <div class="input-tabs">
+                <div class="tab active" onclick="switchTab('equation')">Equation</div>
+                <div class="tab" onclick="switchTab('symbols')">Symbols</div>
+                <div class="tab" onclick="switchTab('axis')">Axis</div>
+            </div>
+            
+            <div id="equationTab" class="tab-content active">
+                <div class="equation-input-container">
+                    <input type="text" class="equation-input" id="equationInput" placeholder="2D: y = x^2, 3D: z = sin(x)*cos(y)" oninput="plotEquation()">
+                    <div class="equation-preview" id="equationPreview">Enter equation to see preview...</div>
+                </div>
+            </div>
+            
+            <div id="symbolsTab" class="tab-content">
+                <div class="math-symbols-panel">
+                    <div class="symbols-header">
+                        <span class="symbols-title">Math Symbols</span>
+                        <button class="symbols-toggle" onclick="toggleSymbols()">More</button>
+                    </div>
+                    <div class="symbols-grid collapsed" id="symbolsGrid">
+                        <!-- Greek Letters -->
+                        <button class="symbol-btn" onclick="insertSymbol('π')">π</button>
+                        <button class="symbol-btn" onclick="insertSymbol('α')">α</button>
+                        <button class="symbol-btn" onclick="insertSymbol('β')">β</button>
+                        <button class="symbol-btn" onclick="insertSymbol('γ')">γ</button>
+                        <button class="symbol-btn" onclick="insertSymbol('δ')">δ</button>
+                        <button class="symbol-btn" onclick="insertSymbol('θ')">θ</button>
+                        
+                        <!-- Math Operators -->
+                        <button class="symbol-btn" onclick="insertSymbol('∞')">∞</button>
+                        <button class="symbol-btn" onclick="insertSymbol('∑')">∑</button>
+                        <button class="symbol-btn" onclick="insertSymbol('∫')">∫</button>
+                        <button class="symbol-btn" onclick="insertSymbol('∂')">∂</button>
+                        <button class="symbol-btn" onclick="insertSymbol('∆')">∆</button>
+                        <button class="symbol-btn" onclick="insertSymbol('√')">√</button>
+                        
+                        <!-- Comparison -->
+                        <button class="symbol-btn" onclick="insertSymbol('≤')">≤</button>
+                        <button class="symbol-btn" onclick="insertSymbol('≥')">≥</button>
+                        <button class="symbol-btn" onclick="insertSymbol('≠')">≠</button>
+                        <button class="symbol-btn" onclick="insertSymbol('≈')">≈</button>
+                        <button class="symbol-btn" onclick="insertSymbol('±')">±</button>
+                        <button class="symbol-btn" onclick="insertSymbol('÷')">÷</button>
+                        
+                        <!-- Functions -->
+                        <button class="symbol-btn special" onclick="insertFunction('sin()')">sin</button>
+                        <button class="symbol-btn special" onclick="insertFunction('cos()')">cos</button>
+                        <button class="symbol-btn special" onclick="insertFunction('tan()')">tan</button>
+                        <button class="symbol-btn special" onclick="insertFunction('log()')">log</button>
+                        <button class="symbol-btn special" onclick="insertFunction('ln()')">ln</button>
+                        <button class="symbol-btn special" onclick="insertFunction('exp()')">exp</button>
+                        
+                        <!-- Superscripts -->
+                        <button class="symbol-btn special" onclick="insertSuperscript('²')">x²</button>
+                        <button class="symbol-btn special" onclick="insertSuperscript('³')">x³</button>
+                        <button class="symbol-btn special" onclick="insertSuperscript('^n')">xⁿ</button>
+                        <button class="symbol-btn special" onclick="insertSuperscript('^-1')">x⁻¹</button>
+                        
+                        <!-- Subscripts -->
+                        <button class="symbol-btn special" onclick="insertSubscript('_1')">x₁</button>
+                        <button class="symbol-btn special" onclick="insertSubscript('_2')">x₂</button>
+                        <button class="symbol-btn special" onclick="insertSubscript('_n')">xₙ</button>
+                        <button class="symbol-btn special" onclick="insertSubscript('_i')">xᵢ</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="axisTab" class="tab-content">
+                <div class="axis-controls" id="axisControls2D">
+                    <div class="axis-input-group">
+                        <label class="axis-label">X Min</label>
+                        <input type="number" class="axis-input" id="xMin" value="-10" onchange="updateGraph()">
+                    </div>
+                    <div class="axis-input-group">
+                        <label class="axis-label">X Max</label>
+                        <input type="number" class="axis-input" id="xMax" value="10" onchange="updateGraph()">
+                    </div>
+                    <div class="axis-input-group">
+                        <label class="axis-label">Y Min</label>
+                        <input type="number" class="axis-input" id="yMin" value="-10" onchange="updateGraph()">
+                    </div>
+                    <div class="axis-input-group">
+                        <label class="axis-label">Y Max</label>
+                        <input type="number" class="axis-input" id="yMax" value="10" onchange="updateGraph()">
+                    </div>
+                </div>
+                
+                <div class="axis-controls" id="axisControls3D" style="display: none; grid-template-columns: 1fr 1fr 1fr;">
+                    <div class="axis-input-group">
+                        <label class="axis-label">X Range</label>
+                        <input type="text" class="axis-input" value="-5 to 5" onchange="update3D()">
+                    </div>
+                    <div class="axis-input-group">
+                        <label class="axis-label">Y Range</label>
+                        <input type="text" class="axis-input" value="-5 to 5" onchange="update3D()">
+                    </div>
+                    <div class="axis-input-group">
+                        <label class="axis-label">Z Range</label>
+                        <input type="text" class="axis-input" value="-5 to 5" onchange="update3D()">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Global variables
+        let graphCanvas, drawingCanvas, threeContainer, graphCtx, drawCtx;
+        let equationDisplay, equationInput, equationPreview, drawingIndicator, modeToggle;
+        let scene, camera, renderer, mesh;
+        let isDrawMode = true;
+        let isDrawing = false;
+        let scale = 1;
+        let drawnPoints = [];
+        let currentEquation = '';
+        let currentGraphMode = '2d';
+        let symbolsExpanded = false;
+        let xMin = -10, xMax = 10, yMin = -10, yMax = 10;
+        
+        // Initialize DOM elements first
+        function initElements() {
+            graphCanvas = document.getElementById('graphCanvas');
+            drawingCanvas = document.getElementById('drawingCanvas');
+            threeContainer = document.getElementById('threeContainer');
+            graphCtx = graphCanvas.getContext('2d');
+            drawCtx = drawingCanvas.getContext('2d');
+            equationDisplay = document.getElementById('equationDisplay');
+            equationInput = document.getElementById('equationInput');
+            equationPreview = document.getElementById('equationPreview');
+            drawingIndicator = document.getElementById('drawingIndicator');
+            modeToggle = document.querySelector('.mode-toggle');
+        }
+        
+        // Initialize canvas sizes
+        function initializeCanvasSize() {
+            const container = document.querySelector('.graph-container');
+            const rect = container.getBoundingClientRect();
+            const width = rect.width - 4; // Account for border
+            const height = rect.height - 4;
+            
+            graphCanvas.width = width;
+            graphCanvas.height = height;
+            drawingCanvas.width = width;
+            drawingCanvas.height = height;
+            
+            graphCanvas.style.width = width + 'px';
+            graphCanvas.style.height = height + 'px';
+            drawingCanvas.style.width = width + 'px';
+            drawingCanvas.style.height = height + 'px';
+        }
+        
+        function getAxisValues() {
+            xMin = parseFloat(document.getElementById('xMin').value) || -10;
+            xMax = parseFloat(document.getElementById('xMax').value) || 10;
+            yMin = parseFloat(document.getElementById('yMin').value) || -10;
+            yMax = parseFloat(document.getElementById('yMax').value) || 10;
+        }
+        
+        function drawGrid() {
+            if (currentGraphMode === '3d') return;
+            
+            getAxisValues();
+            graphCtx.clearRect(0, 0, graphCanvas.width, graphCanvas.height);
+            
+            const width = graphCanvas.width;
+            const height = graphCanvas.height;
+            
+            // Grid with sharper lines
+            graphCtx.strokeStyle = '#00ff8866';
+            graphCtx.lineWidth = 0.5;
+            
+            const gridSize = 20 * scale;
+            for (let x = 0; x < width; x += gridSize) {
+                graphCtx.beginPath();
+                graphCtx.moveTo(x + 0.5, 0);
+                graphCtx.lineTo(x + 0.5, height);
+                graphCtx.stroke();
+            }
+            
+            for (let y = 0; y < height; y += gridSize) {
+                graphCtx.beginPath();
+                graphCtx.moveTo(0, y + 0.5);
+                graphCtx.lineTo(width, y + 0.5);
+                graphCtx.stroke();
+            }
+            
+            // Axes with glow effect
+            graphCtx.strokeStyle = '#00ff88';
+            graphCtx.lineWidth = 2.5;
+            graphCtx.shadowColor = '#00ff88';
+            graphCtx.shadowBlur = 4;
+            
+            const centerX = width / 2;
+            const centerY = height / 2;
+            
+            // X-axis
+            graphCtx.beginPath();
+            graphCtx.moveTo(0, centerY);
+            graphCtx.lineTo(width, centerY);
+            graphCtx.stroke();
+            
+            // Y-axis
+            graphCtx.beginPath();
+            graphCtx.moveTo(centerX, 0);
+            graphCtx.lineTo(centerX, height);
+            graphCtx.stroke();
+            
+            // Reset shadow
+            graphCtx.shadowBlur = 0;
+        }
+        
+        function evaluateExpression(expr, x) {
+            try {
+                let processedExpr = expr
+                    .replace(/\^/g, '**')
+                    .replace(/sin/g, 'Math.sin')
+                    .replace(/cos/g, 'Math.cos')
+                    .replace(/tan/g, 'Math.tan')
+                    .replace(/log/g, 'Math.log')
+                    .replace(/ln/g, 'Math.log')
+                    .replace(/exp/g, 'Math.exp')
+                    .replace(/sqrt/g, 'Math.sqrt')
+                    .replace(/√/g, 'Math.sqrt')
+                    .replace(/pi/g, 'Math.PI')
+                    .replace(/π/g, 'Math.PI')
+                    .replace(/e/g, 'Math.E')
+                    .replace(/∞/g, 'Infinity')
+                    .replace(/x/g, '(' + x.toString() + ')');
+                
+                return eval(processedExpr);
+            } catch (e) {
+                return NaN;
+            }
+        }
+        
+        function graphToScreen(graphX, graphY) {
+            const screenX = (graphX - (xMax + xMin) / 2) * graphCanvas.width / (xMax - xMin) + graphCanvas.width / 2;
+            const screenY = -(graphY - (yMax + yMin) / 2) * graphCanvas.height / (yMax - yMin) + graphCanvas.height / 2;
+            return { x: screenX, y: screenY };
+        }
+        
+        function screenToGraph(screenX, screenY) {
+            const rect = graphCanvas.getBoundingClientRect();
+            const x = screenX - rect.left;
+            const y = screenY - rect.top;
+            
+            const graphX = (x - graphCanvas.width / 2) * (xMax - xMin) / graphCanvas.width + (xMax + xMin) / 2;
+            const graphY = -(y - graphCanvas.height / 2) * (yMax - yMin) / graphCanvas.height + (yMax + yMin) / 2;
+            
+            return { x: graphX, y: graphY };
+        }
+        
+        function updatePreview() {
+            const equation = equationInput.value.trim();
+            
+            if (!equation) {
+                equationPreview.textContent = 'Enter equation to see preview...';
+                return;
+            }
+            
+            let formatted = equation
+                .replace(/\^2/g, '²')
+                .replace(/\^3/g, '³')
+                .replace(/\^-1/g, '⁻¹')
+                .replace(/\_1/g, '₁')
+                .replace(/\_2/g, '₂')
+                .replace(/\_n/g, 'ₙ')
+                .replace(/\_i/g, 'ᵢ')
+                .replace(/pi/g, 'π')
+                .replace(/infinity/g, '∞')
+                .replace(/sqrt/g, '√')
+                .replace(/sum/g, '∑')
+                .replace(/integral/g, '∫');
+                
+            if (currentGraphMode === '3d') {
+                equationPreview.textContent = `z = ${formatted}`;
+            } else {
+                equationPreview.textContent = `y = ${formatted}`;
+            }
+        }
+        
+        // Global functions for onclick handlers
+        function plotEquation() {
+            const equation = equationInput.value.trim();
+            currentEquation = equation;
+            
+            updatePreview();
+            
+            if (currentGraphMode === '3d') {
+                if (equation) {
+                    equationDisplay.textContent = `z = ${equation}`;
+                } else {
+                    equationDisplay.textContent = 'z = 0';
+                }
+                return;
+            }
+            
+            if (!equation) {
+                equationDisplay.textContent = 'y = 0';
+                drawGrid();
+                return;
+            }
+            
+            equationDisplay.textContent = `y = ${equation}`;
+            drawGrid();
+            
+            // Plot the equation
+            graphCtx.strokeStyle = '#ff4477';
+            graphCtx.lineWidth = 3;
+            graphCtx.shadowColor = '#ff4477';
+            graphCtx.shadowBlur = 6;
+            graphCtx.lineCap = 'round';
+            graphCtx.lineJoin = 'round';
+            graphCtx.beginPath();
+            
+            let firstPoint = true;
+            const step = (xMax - xMin) / graphCanvas.width;
+            
+            for (let x = xMin; x <= xMax; x += step) {
+                const y = evaluateExpression(equation, x);
+                
+                if (!isNaN(y) && isFinite(y)) {
+                    const screenPos = graphToScreen(x, y);
+                    
+                    if (screenPos.y >= 0 && screenPos.y <= graphCanvas.height) {
+                        if (firstPoint) {
+                            graphCtx.moveTo(screenPos.x, screenPos.y);
+                            firstPoint = false;
+                        } else {
+                            graphCtx.lineTo(screenPos.x, screenPos.y);
+                        }
+                    }
+                }
+            }
+            
+            graphCtx.stroke();
+            graphCtx.shadowBlur = 0;
+        }
+        
+        function switchGraphMode(mode) {
+            currentGraphMode = mode;
+            
+            document.querySelectorAll('.graph-mode-tab').forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            if (mode === '3d') {
+                graphCanvas.style.display = 'none';
+                drawingCanvas.style.display = 'none';
+                threeContainer.style.display = 'block';
+                document.getElementById('threeControls').classList.add('active');
+                drawingIndicator.style.display = 'none';
+                modeToggle.style.display = 'none';
+                
+                document.getElementById('axisControls2D').style.display = 'none';
+                document.getElementById('axisControls3D').style.display = 'grid';
+                
+                equationInput.placeholder = "3D: z = sin(x)*cos(y), z = x^2 + y^2";
+            } else {
+                graphCanvas.style.display = 'block';
+                drawingCanvas.style.display = 'block';
+                threeContainer.style.display = 'none';
+                document.getElementById('threeControls').classList.remove('active');
+                drawingIndicator.style.display = 'block';
+                modeToggle.style.display = 'block';
+                
+                document.getElementById('axisControls2D').style.display = 'grid';
+                document.getElementById('axisControls3D').style.display = 'none';
+                
+                equationInput.placeholder = "2D: y = x^2, y = sin(x), y = 2*x + 1";
+                
+                drawGrid();
+                if (currentEquation) {
+                    plotEquation();
+                }
+            }
+        }
+        
+        function toggleMode() {
+            if (currentGraphMode === '3d') return;
+            
+            isDrawMode = !isDrawMode;
+            modeToggle.textContent = isDrawMode ? 'Draw' : 'Type';
+            drawingIndicator.style.display = isDrawMode ? 'block' : 'none';
+            drawingCanvas.style.pointerEvents = isDrawMode ? 'auto' : 'none';
+        }
+        
+        function zoom(direction) {
+            if (currentGraphMode === '3d') {
+                return;
+            }
+            
+            scale += direction * 0.2;
+            scale = Math.max(0.5, Math.min(3, scale));
+            updateGraph();
+        }
+        
+        function clearGraph() {
+            if (currentGraphMode === '3d') {
+                equationDisplay.textContent = 'z = 0';
+            } else {
+                drawCtx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
+                equationDisplay.textContent = 'y = 0';
+                drawGrid();
+            }
+            
+            equationInput.value = '';
+            currentEquation = '';
+            drawnPoints = [];
+            updatePreview();
+        }
+        
+        function updateGraph() {
+            if (currentGraphMode === '3d') {
+                return;
+            } else {
+                drawGrid();
+                if (currentEquation && !isDrawMode) {
+                    plotEquation();
+                }
+            }
+        }
+        
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            if (tabName === 'equation') {
+                document.querySelector('.tab:first-child').classList.add('active');
+                document.getElementById('equationTab').classList.add('active');
+            } else if (tabName === 'symbols') {
+                document.querySelector('.tab:nth-child(2)').classList.add('active');
+                document.getElementById('symbolsTab').classList.add('active');
+            } else {
+                document.querySelector('.tab:last-child').classList.add('active');
+                document.getElementById('axisTab').classList.add('active');
+            }
+        }
+        
+        function insertSymbol(symbol) {
+            const input = equationInput;
+            const start = input.selectionStart;
+            const end = input.selectionEnd;
+            const text = input.value;
+            
+            input.value = text.substring(0, start) + symbol + text.substring(end);
+            input.setSelectionRange(start + symbol.length, start + symbol.length);
+            input.focus();
+            
+            plotEquation();
+            updatePreview();
+        }
+        
+        function insertFunction(func) {
+            const input = equationInput;
+            const start = input.selectionStart;
+            const end = input.selectionEnd;
+            const text = input.value;
+            
+            input.value = text.substring(0, start) + func + text.substring(end);
+            input.setSelectionRange(start + func.length - 1, start + func.length - 1);
+            input.focus();
+            
+            plotEquation();
+            updatePreview();
+        }
+        
+        function insertSuperscript(sup) {
+            insertSymbol(sup);
+        }
+        
+        function insertSubscript(sub) {
+            insertSymbol(sub);
+        }
+        
+        function toggleSymbols() {
+            symbolsExpanded = !symbolsExpanded;
+            const grid = document.getElementById('symbolsGrid');
+            const toggle = document.querySelector('.symbols-toggle');
+            
+            if (symbolsExpanded) {
+                grid.classList.remove('collapsed');
+                toggle.textContent = 'Less';
+            } else {
+                grid.classList.add('collapsed');
+                toggle.textContent = 'More';
+            }
+        }
+        
+        function rotate3D(axis) {
+            // 3D functionality placeholder
+        }
+        
+        function reset3D() {
+            // 3D functionality placeholder
+        }
+        
+        function update3D() {
+            // 3D functionality placeholder
+        }
+        
+        // Drawing functionality
+        function generateEquationFromPoints() {
+            if (drawnPoints.length < 3) return;
+            
+            try {
+                const n = Math.min(drawnPoints.length, 10);
+                const points = drawnPoints.slice(0, n);
+                
+                const avgSlope = (points[points.length-1].y - points[0].y) / (points[points.length-1].x - points[0].x);
+                const intercept = points[0].y - avgSlope * points[0].x;
+                
+                if (Math.abs(avgSlope) < 0.1) {
+                    currentEquation = intercept.toFixed(2);
+                } else {
+                    currentEquation = `${avgSlope.toFixed(2)}*x + ${intercept.toFixed(2)}`;
+                }
+                
+                equationDisplay.textContent = `y = ${currentEquation}`;
+            } catch (e) {
+                console.error('Error generating equation:', e);
+            }
+        }
+        
+        function startDrawing(e) {
+            if (!isDrawMode || currentGraphMode === '3d') return;
+            
+            isDrawing = true;
+            drawnPoints = [];
+            drawCtx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
+            drawingIndicator.textContent = 'Drawing...';
+            
+            const point = getEventPos(e);
+            const graphPoint = screenToGraph(point.x, point.y);
+            drawnPoints.push(graphPoint);
+            
+            drawCtx.strokeStyle = '#ff4477';
+            drawCtx.lineWidth = 3;
+            drawCtx.lineCap = 'round';
+            drawCtx.lineJoin = 'round';
+            drawCtx.shadowColor = '#ff4477';
+            drawCtx.shadowBlur = 4;
+            drawCtx.beginPath();
+            drawCtx.moveTo(point.x, point.y);
+        }
+        
+        function draw(e) {
+            if (!isDrawing || !isDrawMode || currentGraphMode === '3d') return;
+            
+            e.preventDefault();
+            const point = getEventPos(e);
+            const graphPoint = screenToGraph(point.x, point.y);
+            drawnPoints.push(graphPoint);
+            
+            drawCtx.lineTo(point.x, point.y);
+            drawCtx.stroke();
+            
+            if (drawnPoints.length > 2 && drawnPoints.length % 5 === 0) {
+                generateEquationFromPoints();
+            }
+        }
+        
+        function stopDrawing() {
+            if (!isDrawing) return;
+            
+            isDrawing = false;
+            drawingIndicator.textContent = 'Drawing Mode';
+            
+            if (drawnPoints.length > 2) {
+                generateEquationFromPoints();
+            }
+        }
+        
+        function getEventPos(e) {
+            const rect = drawingCanvas.getBoundingClientRect();
+            const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+            const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+            
+            return {
+                x: clientX - rect.left,
+                y: clientY - rect.top
+            };
+        }
+        
+        // Initialize everything
+        function initialize() {
+            initElements();
+            initializeCanvasSize();
+            drawGrid();
+            updatePreview();
+            
+            // Add event listeners
+            equationInput.addEventListener('input', function() {
+                plotEquation();
+                updatePreview();
+            });
+            
+            // Drawing event listeners
+            drawingCanvas.addEventListener('mousedown', startDrawing);
+            drawingCanvas.addEventListener('mousemove', draw);
+            drawingCanvas.addEventListener('mouseup', stopDrawing);
+            drawingCanvas.addEventListener('mouseout', stopDrawing);
+            
+            drawingCanvas.addEventListener('touchstart', startDrawing);
+            drawingCanvas.addEventListener('touchmove', draw);
+            drawingCanvas.addEventListener('touchend', stopDrawing);
+            
+            // Prevent scrolling issues
+            document.addEventListener('touchmove', function(e) {
+                if (e.target.closest('.graph-container')) {
+                    e.preventDefault();
+                }
+            }, { passive: false });
+        }
+        
+        // Initialize when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initialize);
+        } else {
+            initialize();
+        }
+        
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            if (currentGraphMode === '2d') {
+                initializeCanvasSize();
+                drawGrid();
+                if (currentEquation) {
+                    plotEquation();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
