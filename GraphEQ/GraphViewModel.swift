@@ -196,6 +196,11 @@ class GraphViewModel: ObservableObject {
         xMax = xRange.upperBound
         yMin = yRange.lowerBound
         yMax = yRange.upperBound
+        
+        // Recalculate plot with new range
+        if !isDrawingMode && !is3DMode {
+            parseAndPlotExpression()
+        }
     }
     
     /// Zooms out by increasing the visible range (showing more of the graph).
@@ -214,6 +219,11 @@ class GraphViewModel: ObservableObject {
         xMax = xRange.upperBound
         yMin = yRange.lowerBound
         yMax = yRange.upperBound
+        
+        // Recalculate plot with new range
+        if !isDrawingMode && !is3DMode {
+            parseAndPlotExpression()
+        }
     }
 
     // MARK: - Private Methods (Expression Parsing & Plotting)
@@ -237,12 +247,17 @@ class GraphViewModel: ObservableObject {
         }
 
         var points: [CGPoint] = []
-        let numSamples: Int = 200 // Number of points to plot for smoothness
-
+        
         // Determine a reasonable X range for plotting based on current view range
         let plotXMin = xRange.lowerBound
         let plotXMax = xRange.upperBound
-        let xStep = (plotXMax - plotXMin) / CGFloat(numSamples - 1)
+        let rangeWidth = plotXMax - plotXMin
+        
+        // Use more points when zoomed out to ensure smooth curves
+        let baseSamples: Int = 200
+        let zoomFactor = max(1.0, rangeWidth / 10.0) // More points for wider ranges
+        let numSamples: Int = Int(Double(baseSamples) * zoomFactor)
+        let xStep = rangeWidth / CGFloat(numSamples - 1)
 
         // Use Expression library for robust parsing
         for i in 0..<numSamples {

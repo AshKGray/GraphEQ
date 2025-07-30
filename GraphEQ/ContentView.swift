@@ -23,15 +23,18 @@ struct ContentView: View {
                 graphContainer
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 
-                // Compact bottom section
-                VStack(spacing: 4) {
-                    // Equation Display
-                    equationDisplay
-                    
-                    // Input Section
-                    inputSection
+                // Scrollable bottom section
+                ScrollView {
+                    VStack(spacing: 4) {
+                        // Equation Display
+                        equationDisplay
+                        
+                        // Input Section
+                        inputSection
+                    }
+                    .padding(.bottom, 20) // Add extra padding at bottom for scrolling
                 }
-                .frame(height: 120) // Fixed height for bottom section
+                .frame(maxHeight: 200) // Maximum height, but allows scrolling
             }
         }
     }
