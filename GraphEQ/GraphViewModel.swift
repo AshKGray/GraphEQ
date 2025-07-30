@@ -165,13 +165,14 @@ class GraphViewModel: ObservableObject {
              let plotXMax = xRange.upperBound
              let xStep = (plotXMax - plotXMin) / CGFloat(numSamples - 1)
 
-             // TODO: Temporarily disabled Expression parsing due to naming conflicts
-             // For now, create a simple test plot
+             // Basic expression parsing for common functions
              for i in 0..<numSamples {
                  let x = plotXMin + CGFloat(i) * xStep
-                 // Simple test function: y = sin(x)
-                 let y = sin(x)
-                 points.append(CGPoint(x: x, y: y))
+                 let y = evaluateSimpleExpression(mathExpression, x: x)
+                 
+                 if y.isFinite {
+                     points.append(CGPoint(x: x, y: y))
+                 }
              }
              dataPoints = points
     }
@@ -204,6 +205,75 @@ class GraphViewModel: ObservableObject {
         }
         
         dataPoints3D = points3D
+    }
+    
+    /// Evaluates simple mathematical expressions for plotting
+    /// Supports basic operations: +, -, *, /, ^, and common functions
+    private func evaluateSimpleExpression(_ expression: String, x: CGFloat) -> CGFloat {
+        let cleanExpression = expression.replacingOccurrences(of: " ", with: "")
+        
+        // Handle common patterns
+        if cleanExpression.contains("x") {
+            // Handle multiplication (e.g., "8x" -> "8*x")
+            if let match = cleanExpression.range(of: #"(\d+)x"#, options: .regularExpression) {
+                let number = String(cleanExpression[match])
+                let numericPart = number.replacingOccurrences(of: "x", with: "")
+                if let coefficient = Double(numericPart) {
+                    return CGFloat(coefficient) * x
+                }
+            }
+            
+            // Handle power operations (e.g., "x^2")
+            if let match = cleanExpression.range(of: #"x\^(\d+)"#, options: .regularExpression) {
+                let powerPart = String(cleanExpression[match])
+                let power = powerPart.replacingOccurrences(of: "x^", with: "")
+                if let exponent = Double(power) {
+                    return pow(x, CGFloat(exponent))
+                }
+            }
+            
+            // Handle simple x replacement for other cases
+            let xValue = String(format: "%.6f", x)
+            let evaluatedExpression = cleanExpression.replacingOccurrences(of: "x", with: xValue)
+            
+            // Handle basic operations
+            return evaluateBasicMath(evaluatedExpression)
+        } else {
+            // No x variable, treat as constant
+            return evaluateBasicMath(cleanExpression)
+        }
+    }
+    
+    /// Evaluates basic mathematical expressions
+    private func evaluateBasicMath(_ expression: String, x: CGFloat = 0) -> CGFloat {
+        // Handle common functions
+        if expression.hasPrefix("sin(") && expression.hasSuffix(")") {
+            let inner = String(expression.dropFirst(4).dropLast(1))
+            return sin(evaluateBasicMath(inner, x: x))
+        } else if expression.hasPrefix("cos(") && expression.hasSuffix(")") {
+            let inner = String(expression.dropFirst(4).dropLast(1))
+            return cos(evaluateBasicMath(inner, x: x))
+        } else if expression.hasPrefix("tan(") && expression.hasSuffix(")") {
+            let inner = String(expression.dropFirst(4).dropLast(1))
+            return tan(evaluateBasicMath(inner, x: x))
+        } else if expression.hasPrefix("sqrt(") && expression.hasSuffix(")") {
+            let inner = String(expression.dropFirst(5).dropLast(1))
+            return sqrt(evaluateBasicMath(inner, x: x))
+        } else if expression.hasPrefix("log(") && expression.hasSuffix(")") {
+            let inner = String(expression.dropFirst(4).dropLast(1))
+            return log(evaluateBasicMath(inner, x: x))
+        } else if expression.hasPrefix("exp(") && expression.hasSuffix(")") {
+            let inner = String(expression.dropFirst(4).dropLast(1))
+            return exp(evaluateBasicMath(inner, x: x))
+        }
+        
+        // Handle basic arithmetic
+        if let value = Double(expression) {
+            return CGFloat(value)
+        }
+        
+        // Default fallback
+        return 0
     }
 
     // MARK: - Private Methods (Drawing & Curve Fitting)
