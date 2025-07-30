@@ -19,7 +19,7 @@ struct ContentView: View {
                 // App Header
                 appHeader
                 
-                // Graph Container - Takes most of the screen
+                // Graph Container - Takes remaining space
                 graphContainer
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 
@@ -34,7 +34,7 @@ struct ContentView: View {
                     }
                     .padding(.bottom, 20) // Add extra padding at bottom for scrolling
                 }
-                .frame(maxHeight: 200) // Maximum height, but allows scrolling
+                .frame(height: 200) // Fixed height to ensure content is always visible
             }
         }
     }
