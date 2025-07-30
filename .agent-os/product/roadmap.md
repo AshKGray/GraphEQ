@@ -23,7 +23,7 @@ The following features have been implemented:
 
 ### Features
 
-- [ ] **Complete 3D Mode Toggle** - Add 3D mode switch to user interface `S`
+- [x] **Complete 3D Mode Toggle** - Add 3D mode switch to user interface `S`
 - [ ] **3D Expression Parsing** - Implement multivariable expression evaluation (z = f(x,y)) `M`
 - [ ] **3D Surface Rendering** - Basic 3D surface mesh generation and display `M`
 - [ ] **3D Camera Controls** - Interactive 3D camera with rotation, zoom, and pan `L`
