@@ -80,6 +80,9 @@ class GraphViewModel: ObservableObject {
 
     /// The current zoom scale for the graph.
     @Published var scale: CGFloat = 1.0
+    
+    /// The currently selected input tab.
+    @Published var selectedTab: InputTab = .equation
 
     // MARK: - Internal State for Graph View
 
@@ -87,6 +90,15 @@ class GraphViewModel: ObservableObject {
     @Published var xRange: ClosedRange<CGFloat> = -5.0...5.0
     /// The visible Y-range of the graph, considering scale and translation.
     @Published var yRange: ClosedRange<CGFloat> = -5.0...5.0
+    
+    /// X-axis minimum value for UI binding
+    @Published var xMin: CGFloat = -5.0
+    /// X-axis maximum value for UI binding
+    @Published var xMax: CGFloat = 5.0
+    /// Y-axis minimum value for UI binding
+    @Published var yMin: CGFloat = -5.0
+    /// Y-axis maximum value for UI binding
+    @Published var yMax: CGFloat = 5.0
 
     // MARK: - Initializer
 
@@ -96,6 +108,32 @@ class GraphViewModel: ObservableObject {
     }
 
     // MARK: - Public Methods
+    
+    /// Inserts a mathematical symbol into the current expression.
+    func insertSymbol(_ symbol: MathSymbol) {
+        switch symbol {
+        case .sin, .cos, .tan, .log, .ln, .exp:
+            mathExpression += "\(symbol.display)()"
+        case .xSquared:
+            mathExpression += "x^2"
+        case .xCubed:
+            mathExpression += "x^3"
+        case .xPowerN:
+            mathExpression += "x^n"
+        case .xInverse:
+            mathExpression += "x^-1"
+        case .x1:
+            mathExpression += "x_1"
+        case .x2:
+            mathExpression += "x_2"
+        case .xN:
+            mathExpression += "x_n"
+        case .xI:
+            mathExpression += "x_i"
+        default:
+            mathExpression += symbol.display
+        }
+    }
 
     /// Resets the graph view to its default scale, translation, and clears drawing/expression.
     func resetView() {
