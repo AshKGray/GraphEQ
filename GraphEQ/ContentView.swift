@@ -163,11 +163,15 @@ struct ContentView: View {
                 .textCase(.uppercase)
                 .tracking(1)
             
-            Text(viewModel.is3DMode ? "z = \(viewModel.mathExpression.isEmpty ? "0" : viewModel.mathExpression)" : "y = \(viewModel.mathExpression.isEmpty ? "0" : viewModel.mathExpression)")
+            TextField(viewModel.is3DMode ? "z = " : "y = ", text: $viewModel.mathExpression)
                 .font(.system(size: 16, weight: .semibold, design: .monospaced))
                 .foregroundColor(.pink)
-                .shadow(color: .pink.opacity(0.8), radius: 8)
-                .shadow(color: .pink.opacity(0.4), radius: 16)
+                .textFieldStyle(PlainTextFieldStyle())
+                .onChange(of: viewModel.mathExpression) { oldValue, newValue in
+                    if !viewModel.isDrawingMode {
+                        viewModel.parseAndPlotExpression()
+                    }
+                }
             
             Spacer()
         }
@@ -190,8 +194,6 @@ struct ContentView: View {
             // Tab content
             Group {
                 switch viewModel.selectedTab {
-                case .equation:
-                    equationTab
                 case .symbols:
                     symbolsTab
                 case .axis:
@@ -224,15 +226,7 @@ struct ContentView: View {
         .padding(.vertical, 8)
     }
     
-    // MARK: - Equation Tab
-    private var equationTab: some View {
-        VStack(spacing: 8) {
-            InputView()
-                .environmentObject(viewModel)
-        }
-        .padding(.horizontal, 16)
-        .padding(.bottom, 8)
-    }
+
     
     // MARK: - Symbols Tab
     private var symbolsTab: some View {
@@ -309,6 +303,7 @@ struct AxisInputGroup: View {
     let label: String
     @Binding var value: CGFloat
     @State private var textValue: String = ""
+    @EnvironmentObject var viewModel: GraphViewModel
     
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -324,6 +319,23 @@ struct AxisInputGroup: View {
                 .onChange(of: textValue) { oldValue, newValue in
                     if let newValue = Double(newValue) {
                         value = CGFloat(newValue)
+                        // Update the corresponding range in the view model
+                        switch label {
+                        case "X Min":
+                            viewModel.xRange = value...viewModel.xRange.upperBound
+                        case "X Max":
+                            viewModel.xRange = viewModel.xRange.lowerBound...value
+                        case "Y Min":
+                            viewModel.yRange = value...viewModel.yRange.upperBound
+                        case "Y Max":
+                            viewModel.yRange = viewModel.yRange.lowerBound...value
+                        default:
+                            break
+                        }
+                        // Recalculate the plot with new ranges
+                        if !viewModel.isDrawingMode && !viewModel.is3DMode {
+                            viewModel.parseAndPlotExpression()
+                        }
                     }
                 }
         }
@@ -510,7 +522,6 @@ struct AxisInputStyle: TextFieldStyle {
 // MARK: - Supporting Types
 
 enum InputTab: String, CaseIterable {
-    case equation = "Equation"
     case symbols = "Symbols"
     case axis = "Axis"
 }

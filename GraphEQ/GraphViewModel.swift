@@ -82,7 +82,7 @@ class GraphViewModel: ObservableObject {
     @Published var scale: CGFloat = 1.0
     
     /// The currently selected input tab.
-    @Published var selectedTab: InputTab = .equation
+    @Published var selectedTab: InputTab = .symbols
     
     /// Whether to show the symbols popup.
     @Published var showSymbolsPopup: Bool = false
