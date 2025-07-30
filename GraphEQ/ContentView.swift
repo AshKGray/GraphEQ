@@ -34,7 +34,7 @@ struct ContentView: View {
                     }
                     .padding(.bottom, 20) // Add extra padding at bottom for scrolling
                 }
-                .frame(height: 200) // Fixed height to ensure content is always visible
+                .frame(height: 300) // Increased height to ensure all content is visible
             }
         }
     }
@@ -188,17 +188,16 @@ struct ContentView: View {
             inputTabs
             
             // Tab content
-            TabView(selection: $viewModel.selectedTab) {
-                equationTab
-                    .tag(InputTab.equation)
-                
-                symbolsTab
-                    .tag(InputTab.symbols)
-                
-                axisTab
-                    .tag(InputTab.axis)
+            Group {
+                switch viewModel.selectedTab {
+                case .equation:
+                    equationTab
+                case .symbols:
+                    symbolsTab
+                case .axis:
+                    axisTab
+                }
             }
-            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
         }
         .background(Color(red: 0.067, green: 0.067, blue: 0.067))
         .overlay(
