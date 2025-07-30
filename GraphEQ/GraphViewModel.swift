@@ -83,6 +83,9 @@ class GraphViewModel: ObservableObject {
     
     /// The currently selected input tab.
     @Published var selectedTab: InputTab = .equation
+    
+    /// Whether to show the symbols popup.
+    @Published var showSymbolsPopup: Bool = false
 
     // MARK: - Internal State for Graph View
 
@@ -103,6 +106,8 @@ class GraphViewModel: ObservableObject {
     // MARK: - Initializer
 
     init() {
+        // Set a default expression that should work
+        mathExpression = "sin(x)"
         // Initial parsing when the ViewModel is created
         parseAndPlotExpression()
     }
@@ -174,6 +179,42 @@ class GraphViewModel: ObservableObject {
         xRange = (newCenterX - scaledWidth / 2.0)...(newCenterX + scaledWidth / 2.0)
         yRange = (newCenterY - scaledHeight / 2.0)...(newCenterY + scaledHeight / 2.0)
     }
+    
+    /// Zooms in by reducing the visible range (showing less of the graph).
+    func zoomIn() {
+        let zoomFactor: CGFloat = 0.8
+        let centerX = (xRange.lowerBound + xRange.upperBound) / 2
+        let centerY = (yRange.lowerBound + yRange.upperBound) / 2
+        let newWidth = (xRange.upperBound - xRange.lowerBound) * zoomFactor
+        let newHeight = (yRange.upperBound - yRange.lowerBound) * zoomFactor
+        
+        xRange = (centerX - newWidth / 2)...(centerX + newWidth / 2)
+        yRange = (centerY - newHeight / 2)...(centerY + newHeight / 2)
+        
+        // Update UI bindings
+        xMin = xRange.lowerBound
+        xMax = xRange.upperBound
+        yMin = yRange.lowerBound
+        yMax = yRange.upperBound
+    }
+    
+    /// Zooms out by increasing the visible range (showing more of the graph).
+    func zoomOut() {
+        let zoomFactor: CGFloat = 1.25
+        let centerX = (xRange.lowerBound + xRange.upperBound) / 2
+        let centerY = (yRange.lowerBound + yRange.upperBound) / 2
+        let newWidth = (xRange.upperBound - xRange.lowerBound) * zoomFactor
+        let newHeight = (yRange.upperBound - yRange.lowerBound) * zoomFactor
+        
+        xRange = (centerX - newWidth / 2)...(centerX + newWidth / 2)
+        yRange = (centerY - newHeight / 2)...(centerY + newHeight / 2)
+        
+        // Update UI bindings
+        xMin = xRange.lowerBound
+        xMax = xRange.upperBound
+        yMin = yRange.lowerBound
+        yMax = yRange.upperBound
+    }
 
     // MARK: - Private Methods (Expression Parsing & Plotting)
 
@@ -199,20 +240,27 @@ class GraphViewModel: ObservableObject {
         let numSamples: Int = 200 // Number of points to plot for smoothness
 
         // Determine a reasonable X range for plotting based on current view range
-             let plotXMin = xRange.lowerBound
-             let plotXMax = xRange.upperBound
-             let xStep = (plotXMax - plotXMin) / CGFloat(numSamples - 1)
+        let plotXMin = xRange.lowerBound
+        let plotXMax = xRange.upperBound
+        let xStep = (plotXMax - plotXMin) / CGFloat(numSamples - 1)
 
-             // Basic expression parsing for common functions
-             for i in 0..<numSamples {
-                 let x = plotXMin + CGFloat(i) * xStep
-                 let y = evaluateSimpleExpression(mathExpression, x: x)
-                 
-                 if y.isFinite {
-                     points.append(CGPoint(x: x, y: y))
-                 }
-             }
-             dataPoints = points
+        // Use Expression library for robust parsing
+        for i in 0..<numSamples {
+            let x = plotXMin + CGFloat(i) * xStep
+            
+            do {
+                let expression = Expression(mathExpression, constants: ["x": Double(x)])
+                let y = try expression.evaluate()
+                
+                if y.isFinite {
+                    points.append(CGPoint(x: x, y: CGFloat(y)))
+                }
+            } catch {
+                // Skip this point if evaluation fails
+                continue
+            }
+        }
+        dataPoints = points
     }
     
     /// Parses 3D expressions (z = f(x,y)) and populates `dataPoints3D`.
@@ -245,73 +293,15 @@ class GraphViewModel: ObservableObject {
         dataPoints3D = points3D
     }
     
-    /// Evaluates simple mathematical expressions for plotting
-    /// Supports basic operations: +, -, *, /, ^, and common functions
-    private func evaluateSimpleExpression(_ expression: String, x: CGFloat) -> CGFloat {
-        let cleanExpression = expression.replacingOccurrences(of: " ", with: "")
-        
-        // Handle common patterns
-        if cleanExpression.contains("x") {
-            // Handle multiplication (e.g., "8x" -> "8*x")
-            if let match = cleanExpression.range(of: #"(\d+)x"#, options: .regularExpression) {
-                let number = String(cleanExpression[match])
-                let numericPart = number.replacingOccurrences(of: "x", with: "")
-                if let coefficient = Double(numericPart) {
-                    return CGFloat(coefficient) * x
-                }
-            }
-            
-            // Handle power operations (e.g., "x^2")
-            if let match = cleanExpression.range(of: #"x\^(\d+)"#, options: .regularExpression) {
-                let powerPart = String(cleanExpression[match])
-                let power = powerPart.replacingOccurrences(of: "x^", with: "")
-                if let exponent = Double(power) {
-                    return pow(x, CGFloat(exponent))
-                }
-            }
-            
-            // Handle simple x replacement for other cases
-            let xValue = String(format: "%.6f", x)
-            let evaluatedExpression = cleanExpression.replacingOccurrences(of: "x", with: xValue)
-            
-            // Handle basic operations
-            return evaluateBasicMath(evaluatedExpression)
-        } else {
-            // No x variable, treat as constant
-            return evaluateBasicMath(cleanExpression)
+    /// Evaluates mathematical expressions using the Expression library
+    private func evaluateExpression(_ expression: String, x: CGFloat) -> CGFloat? {
+        do {
+            let expr = Expression(expression, constants: ["x": Double(x)])
+            let result = try expr.evaluate()
+            return result.isFinite ? CGFloat(result) : nil
+        } catch {
+            return nil
         }
-    }
-    
-    /// Evaluates basic mathematical expressions
-    private func evaluateBasicMath(_ expression: String, x: CGFloat = 0) -> CGFloat {
-        // Handle common functions
-        if expression.hasPrefix("sin(") && expression.hasSuffix(")") {
-            let inner = String(expression.dropFirst(4).dropLast(1))
-            return sin(evaluateBasicMath(inner, x: x))
-        } else if expression.hasPrefix("cos(") && expression.hasSuffix(")") {
-            let inner = String(expression.dropFirst(4).dropLast(1))
-            return cos(evaluateBasicMath(inner, x: x))
-        } else if expression.hasPrefix("tan(") && expression.hasSuffix(")") {
-            let inner = String(expression.dropFirst(4).dropLast(1))
-            return tan(evaluateBasicMath(inner, x: x))
-        } else if expression.hasPrefix("sqrt(") && expression.hasSuffix(")") {
-            let inner = String(expression.dropFirst(5).dropLast(1))
-            return sqrt(evaluateBasicMath(inner, x: x))
-        } else if expression.hasPrefix("log(") && expression.hasSuffix(")") {
-            let inner = String(expression.dropFirst(4).dropLast(1))
-            return log(evaluateBasicMath(inner, x: x))
-        } else if expression.hasPrefix("exp(") && expression.hasSuffix(")") {
-            let inner = String(expression.dropFirst(4).dropLast(1))
-            return exp(evaluateBasicMath(inner, x: x))
-        }
-        
-        // Handle basic arithmetic
-        if let value = Double(expression) {
-            return CGFloat(value)
-        }
-        
-        // Default fallback
-        return 0
     }
 
     // MARK: - Private Methods (Drawing & Curve Fitting)
@@ -319,7 +309,7 @@ class GraphViewModel: ObservableObject {
     /// Attempts to fit a curve to the `drawnPoints` and update the `expression`.
     /// This is a very basic polynomial regression for demonstration.
     /// For robust curve fitting, consider a dedicated numerical library.
-    private func fitCurveToDrawnPoints() {
+    func fitCurveToDrawnPoints() {
         errorMessage = nil
         guard drawnPoints.count > 1 else {
             mathExpression = "" // Not enough points to fit a curve

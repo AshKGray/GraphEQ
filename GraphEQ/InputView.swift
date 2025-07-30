@@ -12,7 +12,7 @@ struct InputView: View {
     @State private var expressionInput: String = ""
     
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 8) {
             // Equation input field
             TextField("2D: y = x^2, 3D: z = sin(x)*cos(y)", text: $expressionInput)
                 .textFieldStyle(EquationInputStyle())
@@ -29,7 +29,7 @@ struct InputView: View {
             if let errorMessage = viewModel.errorMessage {
                 Text(errorMessage)
                     .foregroundColor(.red)
-                    .font(.caption)
+                    .font(.caption2)
                     .padding(.horizontal)
             }
         }
@@ -41,15 +41,15 @@ struct InputView: View {
 struct EquationInputStyle: TextFieldStyle {
     func _body(configuration: TextField<Self._Label>) -> some View {
         configuration
-            .font(.system(size: 18, weight: .medium, design: .monospaced))
+            .font(.system(size: 16, weight: .medium, design: .monospaced))
             .foregroundColor(.cyan)
-            .padding(14)
+            .padding(10)
             .background(Color(red: 0.133, green: 0.133, blue: 0.133))
             .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(Color(red: 0.4, green: 0.4, blue: 0.4), lineWidth: 2)
+                RoundedRectangle(cornerRadius: 6)
+                    .stroke(Color(red: 0.4, green: 0.4, blue: 0.4), lineWidth: 1)
             )
-            .cornerRadius(8)
+            .cornerRadius(6)
     }
 }
 

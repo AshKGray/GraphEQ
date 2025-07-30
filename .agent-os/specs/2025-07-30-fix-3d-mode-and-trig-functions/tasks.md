@@ -7,7 +7,7 @@
   - [x] 1.2 Implement multivariable expression parsing in GraphViewModel
   - [x] 1.3 Create 3D coordinate system and grid rendering
   - [x] 1.4 Implement basic 3D surface mesh generation
-  - [ ] 1.5 Add 3D mode toggle to user interface
+  - [x] 1.5 Add 3D mode toggle to user interface
   - [ ] 1.6 Verify 3D plotting works with simple functions (x + y, x * y)
   - [ ] 1.7 Write integration tests for 3D mode
 

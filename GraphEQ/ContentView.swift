@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct ContentView: View {
-    @StateObject private var viewModel = GraphViewModel()
+    @EnvironmentObject var viewModel: GraphViewModel
     
     var body: some View {
         ZStack {
@@ -19,17 +19,21 @@ struct ContentView: View {
                 // App Header
                 appHeader
                 
-                // Graph Container
+                // Graph Container - Takes most of the screen
                 graphContainer
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 
-                // Equation Display
-                equationDisplay
-                
-                // Input Section
-                inputSection
+                // Compact bottom section
+                VStack(spacing: 4) {
+                    // Equation Display
+                    equationDisplay
+                    
+                    // Input Section
+                    inputSection
+                }
+                .frame(height: 120) // Fixed height for bottom section
             }
         }
-        .environmentObject(viewModel)
     }
     
     // MARK: - App Header
@@ -39,7 +43,8 @@ struct ContentView: View {
                 .font(.title2)
                 .fontWeight(.bold)
                 .foregroundColor(.cyan)
-                .shadow(color: .cyan.opacity(0.5), radius: 4)
+                .shadow(color: .cyan.opacity(0.8), radius: 8)
+                .shadow(color: .cyan.opacity(0.4), radius: 16)
             
             Spacer()
             
@@ -101,7 +106,7 @@ struct ContentView: View {
                 .padding(.bottom, 8)
             }
         }
-        .frame(height: 400)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
     }
@@ -135,12 +140,12 @@ struct ContentView: View {
     private var zoomControls: some View {
         HStack(spacing: 4) {
             Button("-") {
-                viewModel.scale = max(0.5, viewModel.scale - 0.2)
+                viewModel.zoomOut()
             }
             .buttonStyle(ZoomButtonStyle())
             
             Button("+") {
-                viewModel.scale = min(3.0, viewModel.scale + 0.2)
+                viewModel.zoomIn()
             }
             .buttonStyle(ZoomButtonStyle())
         }
@@ -148,24 +153,27 @@ struct ContentView: View {
     
     // MARK: - Equation Display
     private var equationDisplay: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Generated/Current Equation")
+        HStack {
+            Text("Equation:")
                 .font(.caption)
                 .foregroundColor(.gray)
                 .textCase(.uppercase)
                 .tracking(1)
             
             Text(viewModel.is3DMode ? "z = \(viewModel.mathExpression.isEmpty ? "0" : viewModel.mathExpression)" : "y = \(viewModel.mathExpression.isEmpty ? "0" : viewModel.mathExpression)")
-                .font(.system(size: 20, weight: .semibold, design: .monospaced))
+                .font(.system(size: 16, weight: .semibold, design: .monospaced))
                 .foregroundColor(.pink)
-                .shadow(color: .pink.opacity(0.4), radius: 6)
-                .frame(minHeight: 25, alignment: .leading)
+                .shadow(color: .pink.opacity(0.8), radius: 8)
+                .shadow(color: .pink.opacity(0.4), radius: 16)
+            
+            Spacer()
         }
-        .padding(16)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
         .background(Color(red: 0.067, green: 0.067, blue: 0.067))
         .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color(red: 0.267, green: 0.267, blue: 0.267), lineWidth: 2)
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color(red: 0.267, green: 0.267, blue: 0.267), lineWidth: 1)
         )
         .padding(.horizontal, 16)
     }
@@ -191,11 +199,11 @@ struct ContentView: View {
         }
         .background(Color(red: 0.067, green: 0.067, blue: 0.067))
         .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color(red: 0.267, green: 0.267, blue: 0.267), lineWidth: 2)
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color(red: 0.267, green: 0.267, blue: 0.267), lineWidth: 1)
         )
         .padding(.horizontal, 16)
-        .padding(.bottom, 16)
+        .padding(.bottom, 8)
     }
     
     // MARK: - Input Tabs
@@ -210,41 +218,25 @@ struct ContentView: View {
         }
         .background(Color(red: 0.133, green: 0.133, blue: 0.133))
         .cornerRadius(8)
-        .padding(16)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
     }
     
     // MARK: - Equation Tab
     private var equationTab: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 8) {
             InputView()
                 .environmentObject(viewModel)
-            
-            // Equation preview
-            HStack {
-                Text(viewModel.is3DMode ? "z = " : "y = ")
-                    .foregroundColor(.cyan)
-                + Text(viewModel.mathExpression.isEmpty ? "Enter equation..." : viewModel.mathExpression)
-                    .foregroundColor(.cyan.opacity(0.8))
-                
-                Spacer()
-            }
-            .font(.system(size: 14, design: .monospaced))
-            .padding(8)
-            .background(Color(red: 0.102, green: 0.102, blue: 0.102))
-            .overlay(
-                RoundedRectangle(cornerRadius: 6)
-                    .stroke(Color(red: 0.267, green: 0.267, blue: 0.267), lineWidth: 1)
-            )
         }
         .padding(.horizontal, 16)
-        .padding(.bottom, 16)
+        .padding(.bottom, 8)
     }
     
     // MARK: - Symbols Tab
     private var symbolsTab: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 8) {
             HStack {
-                Text("Math Symbols")
+                Text("Quick Symbols")
                     .font(.caption)
                     .foregroundColor(.gray)
                     .textCase(.uppercase)
@@ -252,28 +244,33 @@ struct ContentView: View {
                 
                 Spacer()
                 
-                Button("More") {
-                    // TODO: Toggle symbols expansion
+                Button("All Symbols") {
+                    viewModel.showSymbolsPopup = true
                 }
                 .buttonStyle(SymbolsToggleStyle())
             }
             
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 6), spacing: 6) {
-                ForEach(MathSymbol.allCases, id: \.self) { symbol in
+            // Quick symbols row
+            HStack(spacing: 8) {
+                ForEach(Array(MathSymbol.allCases.prefix(8)), id: \.self) { symbol in
                     Button(symbol.display) {
                         viewModel.insertSymbol(symbol)
                     }
-                    .buttonStyle(SymbolButtonStyle())
+                    .buttonStyle(QuickSymbolButtonStyle())
                 }
             }
         }
         .padding(.horizontal, 16)
-        .padding(.bottom, 16)
+        .padding(.bottom, 8)
+        .sheet(isPresented: $viewModel.showSymbolsPopup) {
+            SymbolsPopupView()
+                .environmentObject(viewModel)
+        }
     }
     
     // MARK: - Axis Tab
     private var axisTab: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 8) {
             if viewModel.is3DMode {
                 axisControls3D
             } else {
@@ -281,12 +278,12 @@ struct ContentView: View {
             }
         }
         .padding(.horizontal, 16)
-        .padding(.bottom, 16)
+        .padding(.bottom, 8)
     }
     
     // MARK: - 2D Axis Controls
     private var axisControls2D: some View {
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 12) {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: 6) {
             AxisInputGroup(label: "X Min", value: $viewModel.xMin)
             AxisInputGroup(label: "X Max", value: $viewModel.xMax)
             AxisInputGroup(label: "Y Min", value: $viewModel.yMin)
@@ -296,7 +293,7 @@ struct ContentView: View {
     
     // MARK: - 3D Axis Controls
     private var axisControls3D: some View {
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 12) {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 6) {
             AxisRangeGroup(label: "X Range")
             AxisRangeGroup(label: "Y Range")
             AxisRangeGroup(label: "Z Range")
@@ -312,9 +309,9 @@ struct AxisInputGroup: View {
     @State private var textValue: String = ""
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 4) {
             Text(label)
-                .font(.caption)
+                .font(.caption2)
                 .foregroundColor(.gray)
             
             TextField("", text: $textValue)
@@ -328,7 +325,7 @@ struct AxisInputGroup: View {
                     }
                 }
         }
-        .padding(12)
+        .padding(8)
         .background(Color(red: 0.133, green: 0.133, blue: 0.133))
         .overlay(
             RoundedRectangle(cornerRadius: 8)
@@ -341,16 +338,16 @@ struct AxisRangeGroup: View {
     let label: String
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 4) {
             Text(label)
-                .font(.caption)
+                .font(.caption2)
                 .foregroundColor(.gray)
             
             Text("-5 to 5")
-                .font(.system(size: 16, weight: .semibold))
+                .font(.system(size: 14, weight: .semibold))
                 .foregroundColor(.green)
         }
-        .padding(12)
+        .padding(8)
         .background(Color(red: 0.133, green: 0.133, blue: 0.133))
         .overlay(
             RoundedRectangle(cornerRadius: 8)
@@ -376,6 +373,8 @@ struct HeaderButtonStyle: ButtonStyle {
             )
             .cornerRadius(8)
             .scaleEffect(configuration.isPressed ? 0.95 : 1.0)
+            .shadow(color: .orange.opacity(0.6), radius: 4)
+            .shadow(color: .orange.opacity(0.3), radius: 8)
             .animation(.easeInOut(duration: 0.1), value: configuration.isPressed)
     }
 }
@@ -425,6 +424,8 @@ struct ZoomButtonStyle: ButtonStyle {
                     .stroke(.cyan, lineWidth: 1)
             )
             .cornerRadius(6)
+            .shadow(color: .cyan.opacity(0.6), radius: 4)
+            .shadow(color: .cyan.opacity(0.3), radius: 8)
     }
 }
 
@@ -472,6 +473,25 @@ struct SymbolButtonStyle: ButtonStyle {
             )
             .cornerRadius(4)
             .scaleEffect(configuration.isPressed ? 1.1 : 1.0)
+            .shadow(color: .white.opacity(0.3), radius: 2)
+            .animation(.easeInOut(duration: 0.2), value: configuration.isPressed)
+    }
+}
+
+struct QuickSymbolButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 14))
+            .foregroundColor(.white)
+            .frame(width: 32, height: 32)
+            .background(Color(red: 0.2, green: 0.2, blue: 0.2))
+            .overlay(
+                RoundedRectangle(cornerRadius: 4)
+                    .stroke(Color(red: 0.333, green: 0.333, blue: 0.333), lineWidth: 1)
+            )
+            .cornerRadius(4)
+            .scaleEffect(configuration.isPressed ? 1.1 : 1.0)
+            .shadow(color: .white.opacity(0.3), radius: 2)
             .animation(.easeInOut(duration: 0.2), value: configuration.isPressed)
     }
 }

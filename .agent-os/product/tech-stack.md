@@ -12,4 +12,10 @@ application_hosting: App Store / TestFlight
 database_hosting: n/a
 asset_hosting: n/a
 deployment_solution: Xcode Cloud / GitHub Actions
-code_repository_url: https://github.com/ashleygray/GraphEQ 
+code_repository_url: https://github.com/ashleygray/GraphEQ
+mathematical_library: Expression (nicklockwood/Expression)
+testing_framework: Apple Testing Framework + XCTest
+architecture_pattern: MVVM with ObservableObject
+graphics_framework: CoreGraphics
+3d_rendering: SceneKit (planned)
+performance_optimization: Metal shaders (planned) 

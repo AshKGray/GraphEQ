@@ -2,8 +2,8 @@
 //  GraphView.swift
 //  GraphEQ
 //
-//  Created by Ashley Gray on 7/27/25.
-
+//  Created by Ashley Gray on 7/30/25.
+//
 
 import SwiftUI
 
@@ -24,7 +24,7 @@ struct GraphView: View {
     var body: some View {
         ZStack {
             // Background for the graph
-            Color.clear
+            Color.black
                 .contentShape(Rectangle()) // Make the whole area tappable/draggable
                 .gesture(
                     // MARK: - Drawing Gesture
@@ -34,11 +34,16 @@ struct GraphView: View {
                                 // Add new point to drawnPoints, converting from view coordinates to graph coordinates
                                 let graphPoint = viewToGraph(point: value.location, in: viewSize)
                                 if let lastPoint = viewModel.drawnPoints.last,
-                                   distance(from: lastPoint, to: graphPoint) < 0.001 {
+                                   distance(from: lastPoint, to: graphPoint) < 0.1 {
                                     // Avoid adding duplicate points if very close
                                     return
                                 }
                                 viewModel.drawnPoints.append(graphPoint)
+                                
+                                // Trigger real-time equation generation
+                                if viewModel.drawnPoints.count > 2 {
+                                    viewModel.fitCurveToDrawnPoints()
+                                }
                             } else {
                                 // Panning gesture for typing mode
                                 currentTranslation = value.translation
@@ -48,8 +53,10 @@ struct GraphView: View {
                         }
                         .onEnded { value in
                             if viewModel.isDrawingMode {
-                                // When drawing ends, attempt to fit a curve
-                                // The `drawnPoints` didSet in ViewModel will trigger fitting
+                                // When drawing ends, finalize the curve fitting
+                                if viewModel.drawnPoints.count > 2 {
+                                    viewModel.fitCurveToDrawnPoints()
+                                }
                             } else {
                                 // When panning ends, reset currentTranslation and commit to viewModel.translation
                                 currentTranslation = .zero
@@ -75,7 +82,6 @@ struct GraphView: View {
                         }
                 )
 
-
             /// The main drawing canvas for the graph.
             Canvas { context, size in
                 // Store the canvas size for coordinate transformations
@@ -86,9 +92,8 @@ struct GraphView: View {
                     }
                 }
 
-                context.translateBy(x: size.width / 2 + viewModel.translation.width, y: size.height / 2 + viewModel.translation.height)
-                context.scaleBy(x: viewModel.scale, y: viewModel.scale)
-
+                // Clear the background
+                context.fill(Path(CGRect(origin: .zero, size: size)), with: .color(.black))
 
                 // MARK: - Draw Grid Lines
                 drawGrid(context: context, size: size)
@@ -102,6 +107,8 @@ struct GraphView: View {
                     // Start path with the first point, adjusted to canvas coordinates
                     let firstPoint = graphToView(point: viewModel.dataPoints[0], in: size)
                     path.move(to: firstPoint)
+                    
+
 
                     // Add lines for the rest of the points
                     for i in 1..<viewModel.dataPoints.count {
@@ -109,7 +116,13 @@ struct GraphView: View {
                         path.addLine(to: point)
                     }
 
-                    context.stroke(path, with: .color(.blue), lineWidth: 2)
+                    // Draw with neon pink glow effect
+                    context.stroke(path, with: .color(.pink), lineWidth: 3)
+                    
+                    // Add glow effect by drawing multiple strokes with decreasing opacity
+                    for i in 1...3 {
+                        context.stroke(path, with: .color(.pink.opacity(0.3 / Double(i))), lineWidth: 3 + CGFloat(i * 2))
+                    }
                 }
 
                 // MARK: - Draw Live Stroke in Drawing Mode
@@ -122,115 +135,139 @@ struct GraphView: View {
                         let point = graphToView(point: viewModel.drawnPoints[i], in: size)
                         path.addLine(to: point)
                     }
-                    context.stroke(path, with: .color(.red), lineWidth: 2)
+                    
+                    // Draw with neon red glow effect
+                    context.stroke(path, with: .color(.red), lineWidth: 3)
+                    
+                    // Add glow effect
+                    for i in 1...3 {
+                        context.stroke(path, with: .color(.red.opacity(0.3 / Double(i))), lineWidth: 3 + CGFloat(i * 2))
+                    }
                 }
             }
-            .background(Color(.systemBackground)) // Adapts to light/dark mode
+            .background(Color.black) // Pure black background
             .clipShape(Rectangle()) // Ensure drawing doesn't go outside the canvas bounds
         }
     }
 
     // MARK: - Drawing Helper Functions
 
-    /// Draws the grid lines on the canvas.
+    /// Draws the grid lines on the canvas with neon green glow.
     private func drawGrid(context: GraphicsContext, size: CGSize) {
-        let lineColor = Color(.systemGray4).opacity(0.7) // Lighter grid lines
+        let lineColor = Color.green.opacity(0.3) // Neon green grid lines
         let lineWidth: CGFloat = 0.5
 
-        // Determine visible range in graph coordinates
-        let xMin = viewModel.xRange.lowerBound
-        let xMax = viewModel.xRange.upperBound
-        let yMin = viewModel.yRange.lowerBound
-        let yMax = viewModel.yRange.upperBound
-
-        // Calculate grid spacing based on current scale
-        let minGridInterval: CGFloat = 1.0 // Start with 1 unit spacing
-        var xInterval = minGridInterval
-        var yInterval = minGridInterval
-
-        // Adjust interval dynamically for zoom
-        while (xMax - xMin) / xInterval > 20 { xInterval *= 2 } // Too many lines, double interval
-        while (xMax - xMin) / xInterval < 5 && xInterval > 0.1 { xInterval /= 2 } // Too few lines, halve interval
-
-        while (yMax - yMin) / yInterval > 20 { yInterval *= 2 }
-        while (yMax - yMin) / yInterval < 5 && yInterval > 0.1 { yInterval /= 2 }
-
-
+        // Calculate grid spacing based on current view range
+        let rangeWidth = viewModel.xRange.upperBound - viewModel.xRange.lowerBound
+        let rangeHeight = viewModel.yRange.upperBound - viewModel.yRange.lowerBound
+        
+        // Determine grid spacing (show grid lines every 1 unit)
+        let gridSpacingX = size.width / rangeWidth
+        let gridSpacingY = size.height / rangeHeight
+        
         // Draw vertical grid lines
-        var xGrid = ceil(xMin / xInterval) * xInterval
-        while xGrid <= xMax {
-            let start = graphToView(point: CGPoint(x: xGrid, y: yMin), in: size)
-            let end = graphToView(point: CGPoint(x: xGrid, y: yMax), in: size)
-            var path = Path()
-            path.move(to: start)
-            path.addLine(to: end)
+        let startX = viewModel.xRange.lowerBound
+        let endX = viewModel.xRange.upperBound
+        var x = ceil(startX)
+        while x <= endX {
+            let screenX = (x - startX) * gridSpacingX
+            let path = Path { path in
+                path.move(to: CGPoint(x: screenX, y: 0))
+                path.addLine(to: CGPoint(x: screenX, y: size.height))
+            }
             context.stroke(path, with: .color(lineColor), lineWidth: lineWidth)
-            xGrid += xInterval
+            x += 1
         }
 
         // Draw horizontal grid lines
-        var yGrid = ceil(yMin / yInterval) * yInterval
-        while yGrid <= yMax {
-            let start = graphToView(point: CGPoint(x: xMin, y: yGrid), in: size)
-            let end = graphToView(point: CGPoint(x: xMax, y: yGrid), in: size)
-            var path = Path()
-            path.move(to: start)
-            path.addLine(to: end)
+        let startY = viewModel.yRange.lowerBound
+        let endY = viewModel.yRange.upperBound
+        var y = ceil(startY)
+        while y <= endY {
+            let screenY = size.height - (y - startY) * gridSpacingY // Flip Y
+            let path = Path { path in
+                path.move(to: CGPoint(x: 0, y: screenY))
+                path.addLine(to: CGPoint(x: size.width, y: screenY))
+            }
             context.stroke(path, with: .color(lineColor), lineWidth: lineWidth)
-            yGrid += yInterval
+            y += 1
         }
     }
 
-    /// Draws the X and Y axes and their labels.
+    /// Draws the X and Y axes with neon cyan glow effect.
     private func drawAxes(context: GraphicsContext, size: CGSize) {
-        let axisColor = Color(.label) // Adapts to light/dark mode
-        let axisWidth: CGFloat = 1.0
+        let axisColor = Color.cyan // Neon cyan axes
+        let axisWidth: CGFloat = 2.0
 
-        // X-Axis
-        let xAxisStart = graphToView(point: CGPoint(x: viewModel.xRange.lowerBound, y: 0), in: size)
-        let xAxisEnd = graphToView(point: CGPoint(x: viewModel.xRange.upperBound, y: 0), in: size)
-        var xAxisPath = Path()
-        xAxisPath.move(to: xAxisStart)
-        xAxisPath.addLine(to: xAxisEnd)
+        // Calculate grid spacing based on current view range
+        let xRange = viewModel.xRange.upperBound - viewModel.xRange.lowerBound
+        let yRange = viewModel.yRange.upperBound - viewModel.yRange.lowerBound
+        
+        let gridSpacingX = size.width / xRange
+        let gridSpacingY = size.height / yRange
+
+        // X-Axis (horizontal line at y=0)
+        let xAxisY = size.height - (0 - viewModel.yRange.lowerBound) * gridSpacingY // Flip Y
+        let xAxisPath = Path { path in
+            path.move(to: CGPoint(x: 0, y: xAxisY))
+            path.addLine(to: CGPoint(x: size.width, y: xAxisY))
+        }
+        
+        // Draw axis with glow effect
         context.stroke(xAxisPath, with: .color(axisColor), lineWidth: axisWidth)
+        for i in 1...2 {
+            context.stroke(xAxisPath, with: .color(axisColor.opacity(0.4 / Double(i))), lineWidth: axisWidth + CGFloat(i))
+        }
 
-        // Y-Axis
-        let yAxisStart = graphToView(point: CGPoint(x: 0, y: viewModel.yRange.lowerBound), in: size)
-        let yAxisEnd = graphToView(point: CGPoint(x: 0, y: viewModel.yRange.upperBound), in: size)
-        var yAxisPath = Path()
-        yAxisPath.move(to: yAxisStart)
-        yAxisPath.addLine(to: yAxisEnd)
+        // Y-Axis (vertical line at x=0)
+        let yAxisX = (0 - viewModel.xRange.lowerBound) * gridSpacingX
+        let yAxisPath = Path { path in
+            path.move(to: CGPoint(x: yAxisX, y: 0))
+            path.addLine(to: CGPoint(x: yAxisX, y: size.height))
+        }
+        
+        // Draw axis with glow effect
         context.stroke(yAxisPath, with: .color(axisColor), lineWidth: axisWidth)
+        for i in 1...2 {
+            context.stroke(yAxisPath, with: .color(axisColor.opacity(0.4 / Double(i))), lineWidth: axisWidth + CGFloat(i))
+        }
 
-        // Draw axis labels (simplified for brevity, showing origin and a few points)
-        // You would typically draw labels for each grid line interval.
-        _ = Color(.secondaryLabel)
+        // Draw axis labels with neon glow
+        let labelColor = Color.cyan
+
+        // Calculate grid spacing based on current view range
+        let rangeWidth = viewModel.xRange.upperBound - viewModel.xRange.lowerBound
+        let rangeHeight = viewModel.yRange.upperBound - viewModel.yRange.lowerBound
+        
+        let axisSpacingX = size.width / rangeWidth
+        let axisSpacingY = size.height / rangeHeight
 
         // Origin label
-        let originPoint = graphToView(point: .zero, in: size)
-        context.draw(Text("0").font(.caption), at: CGPoint(x: originPoint.x - 10, y: originPoint.y + 10))
+        let originX = (0 - viewModel.xRange.lowerBound) * axisSpacingX
+        let originY = size.height - (0 - viewModel.yRange.lowerBound) * axisSpacingY
+        let originText = Text("0").font(.caption).foregroundColor(labelColor)
+        context.draw(originText, at: CGPoint(x: originX - 10, y: originY + 10))
 
-        // X-axis label (e.g., at 1, -1)
-        if viewModel.xRange.contains(1) {
-            let x1Point = graphToView(point: CGPoint(x: 1, y: 0), in: size)
-            context.draw(Text("1").font(.caption), at: CGPoint(x: x1Point.x, y: x1Point.y + 10))
-        }
-        if viewModel.xRange.contains(-1) {
-            let xNeg1Point = graphToView(point: CGPoint(x: -1, y: 0), in: size)
-            context.draw(Text("-1").font(.caption), at: CGPoint(x: xNeg1Point.x, y: xNeg1Point.y + 10))
-        }
+        // X-axis labels (1 and -1)
+        let x1X = (1 - viewModel.xRange.lowerBound) * axisSpacingX
+        let x1Y = size.height - (0 - viewModel.yRange.lowerBound) * axisSpacingY
+        let x1Text = Text("1").font(.caption).foregroundColor(labelColor)
+        context.draw(x1Text, at: CGPoint(x: x1X, y: x1Y + 10))
+        
+        let xNeg1X = (-1 - viewModel.xRange.lowerBound) * axisSpacingX
+        let xNeg1Text = Text("-1").font(.caption).foregroundColor(labelColor)
+        context.draw(xNeg1Text, at: CGPoint(x: xNeg1X, y: x1Y + 10))
 
-        // Y-axis label (e.g., at 1, -1)
-        if viewModel.yRange.contains(1) {
-            let y1Point = graphToView(point: CGPoint(x: 0, y: 1), in: size)
-            context.draw(Text("1").font(.caption), at: CGPoint(x: y1Point.x - 15, y: y1Point.y))
-        }
-        if viewModel.yRange.contains(-1) {
-            let yNeg1Point = graphToView(point: CGPoint(x: 0, y: -1), in: size)
-            context.draw(Text("-1").font(.caption), at: CGPoint(x: yNeg1Point.x - 15, y: yNeg1Point.y))
-        }
+        // Y-axis labels (1 and -1)
+        let y1X = (0 - viewModel.xRange.lowerBound) * axisSpacingX
+        let y1Y = size.height - (1 - viewModel.yRange.lowerBound) * axisSpacingY
+        let y1Text = Text("1").font(.caption).foregroundColor(labelColor)
+        context.draw(y1Text, at: CGPoint(x: y1X - 15, y: y1Y))
+        
+        let yNeg1Y = size.height - (-1 - viewModel.yRange.lowerBound) * axisSpacingY
+        let yNeg1Text = Text("-1").font(.caption).foregroundColor(labelColor)
+        context.draw(yNeg1Text, at: CGPoint(x: y1X - 15, y: yNeg1Y))
     }
-
 
     // MARK: - Coordinate Transformation Helpers
 
@@ -241,12 +278,12 @@ struct GraphView: View {
     /// - Returns: The `CGPoint` in view coordinates.
     private func graphToView(point: CGPoint, in size: CGSize) -> CGPoint {
         // Calculate the range of graph units represented by the view
-        let graphWidth = viewModel.xRange.upperBound - viewModel.xRange.lowerBound
-        let graphHeight = viewModel.yRange.upperBound - viewModel.yRange.lowerBound
+        let rangeWidth = viewModel.xRange.upperBound - viewModel.xRange.lowerBound
+        let rangeHeight = viewModel.yRange.upperBound - viewModel.yRange.lowerBound
 
         // Calculate scaling factors from graph units to view points
-        let scaleX = size.width / graphWidth
-        let scaleY = size.height / graphHeight
+        let scaleX = size.width / rangeWidth
+        let scaleY = size.height / rangeHeight
 
         // Adjust point relative to the lower-left corner of the graph's visible range
         let adjustedX = point.x - viewModel.xRange.lowerBound
@@ -265,11 +302,11 @@ struct GraphView: View {
     ///   - size: The size of the `Canvas` view.
     /// - Returns: The `CGPoint` in graph coordinates.
     private func viewToGraph(point: CGPoint, in size: CGSize) -> CGPoint {
-        let graphWidth = viewModel.xRange.upperBound - viewModel.xRange.lowerBound
-        let graphHeight = viewModel.yRange.upperBound - viewModel.yRange.lowerBound
+        let rangeWidth = viewModel.xRange.upperBound - viewModel.xRange.lowerBound
+        let rangeHeight = viewModel.yRange.upperBound - viewModel.yRange.lowerBound
 
-        let scaleX = size.width / graphWidth
-        let scaleY = size.height / graphHeight
+        let scaleX = size.width / rangeWidth
+        let scaleY = size.height / rangeHeight
 
         // Flip Y-axis back
         let adjustedViewY = size.height - point.y

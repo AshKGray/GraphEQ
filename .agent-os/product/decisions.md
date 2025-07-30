@@ -35,7 +35,7 @@ Traditional math education lacks interactive visual tools, with 60% of students 
 
 ### Rationale
 
-SwiftUI provides native performance and excellent touch interaction while maintaining cross-platform compatibility (iOS/macOS). The MVVM architecture with Combine ensures maintainable, reactive code. The focus on educational use cases differentiates from existing graphing tools.
+SwiftUI provides native performance and excellent touch interaction while maintaining cross-platform compatibility (iOS/macOS). The MVVM architecture with ObservableObject ensures maintainable, reactive code. The Expression library provides robust mathematical parsing with good error handling. The focus on educational use cases differentiates from existing graphing tools.
 
 ### Consequences
 
@@ -44,11 +44,14 @@ SwiftUI provides native performance and excellent touch interaction while mainta
 - Strong educational focus with AI integration potential
 - Scalable architecture for future features
 - Apple ecosystem integration benefits
+- Robust mathematical parsing with Expression library
+- Clean MVVM architecture with ObservableObject
 
 **Negative:**
 - Platform limitations (Apple only initially)
 - Development complexity for advanced mathematical features
 - Dependency on Apple's ecosystem for distribution
+- Learning curve for Expression library integration
 
 ## 2024-07-30: Technical Architecture Decision
 
@@ -59,7 +62,7 @@ SwiftUI provides native performance and excellent touch interaction while mainta
 
 ### Decision
 
-Adopt MVVM architecture with SwiftUI and Combine for reactive programming. Use ExpressionKit for mathematical parsing and CoreGraphics for rendering.
+Adopt MVVM architecture with SwiftUI and ObservableObject for reactive programming. Use Expression library for mathematical parsing and CoreGraphics for rendering.
 
 ### Context
 
@@ -81,7 +84,7 @@ Need for maintainable, testable code that can handle complex mathematical operat
 
 ### Rationale
 
-MVVM with SwiftUI provides the right balance of simplicity and power. ExpressionKit offers robust mathematical parsing with good error handling. Combine enables reactive UI updates essential for real-time plotting.
+MVVM with SwiftUI provides the right balance of simplicity and power. Expression library offers robust mathematical parsing with good error handling. ObservableObject enables reactive UI updates essential for real-time plotting.
 
 ### Consequences
 
@@ -90,9 +93,10 @@ MVVM with SwiftUI provides the right balance of simplicity and power. Expression
 - Reactive UI updates
 - Robust mathematical parsing
 - Future-proof foundation
+- Custom curve fitting implementation
 
 **Negative:**
-- Learning curve for team members new to Combine
+- Learning curve for team members new to ObservableObject
 - Dependency on third-party math library
 - Potential performance overhead from reactive updates
 
@@ -140,4 +144,50 @@ GitHub Actions provides seamless integration with the codebase. SwiftLint ensure
 **Negative:**
 - Initial setup complexity
 - Learning curve for new team members
-- Potential false positives from linting rules 
+- Potential false positives from linting rules
+
+## 2024-07-30: 3D Development Strategy Decision
+
+**ID:** DEC-004
+**Status:** In Progress
+**Category:** Technical
+**Stakeholders:** Development Team
+
+### Decision
+
+Implement 3D mathematical visualization using SceneKit for rendering and custom 3D data structures. Focus on completing 3D mode toggle, expression parsing, and basic surface rendering before adding advanced camera controls.
+
+### Context
+
+The 2D graphing functionality is complete and working well. Users need 3D visualization capabilities for multivariable functions (z = f(x,y)). The current codebase has basic 3D data structures in place but needs completion of the 3D rendering pipeline.
+
+### Alternatives Considered
+
+1. **Metal Shaders for 3D Rendering**
+   - Pros: Maximum performance, full control over rendering
+   - Cons: High development complexity, longer implementation time
+
+2. **Web-based 3D Rendering**
+   - Pros: Cross-platform, easier implementation
+   - Cons: Performance limitations, integration complexity
+
+3. **Third-party 3D Math Libraries**
+   - Pros: Pre-built mathematical visualization
+   - Cons: Limited customization, potential licensing issues
+
+### Rationale
+
+SceneKit provides a good balance of performance and development speed for 3D mathematical visualization. The existing 3D data structures (CGPoint3D, Surface3D, Camera3D) provide a solid foundation. Incremental development allows for testing and refinement of each component.
+
+### Consequences
+
+**Positive:**
+- Leverages existing 3D data structures
+- SceneKit provides robust 3D rendering capabilities
+- Incremental development reduces risk
+- Maintains consistency with Apple ecosystem
+
+**Negative:**
+- SceneKit learning curve for team
+- Potential performance limitations for complex surfaces
+- Additional complexity in the codebase 
