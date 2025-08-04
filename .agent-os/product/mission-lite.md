@@ -1,5 +1,5 @@
 # Product Mission (Lite)
 
-GraphEQ is a mathematical graphing application that helps students grasp math concepts by seeing equations plotted instantly, providing real-time visualization and interactive learning tools.
+GraphEQ is a SwiftUI-based iOS mathematical graphing application that helps students, educators, and professionals visualize complex mathematical functions and solve problems step-by-step by providing real-time 2D/3D graphing with AI-powered mathematical assistance.
 
-GraphEQ serves students and educators who need visual reinforcement for mathematical learning. Unlike traditional graphing calculators, GraphEQ provides real-time interactive plotting with AI-powered problem-solving assistance and multi-modal input methods including freehand drawing. 
+GraphEQ serves students, educators, and technical professionals who need comprehensive mathematical visualization and problem-solving tools. Unlike traditional graphing calculators or basic mobile apps, GraphEQ provides detailed step-by-step mathematical problem solving through Claude AI integration, combined with real-time 2D/3D graphing and interactive drawing capabilities with automatic curve fitting. 

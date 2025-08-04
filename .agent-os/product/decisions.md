@@ -190,4 +190,53 @@ SceneKit provides a good balance of performance and development speed for 3D mat
 **Negative:**
 - SceneKit learning curve for team
 - Potential performance limitations for complex surfaces
-- Additional complexity in the codebase 
+- Additional complexity in the codebase
+
+## 2025-08-03: Claude AI Integration Decision
+
+**ID:** DEC-005
+**Status:** Accepted
+**Category:** Technical
+**Stakeholders:** Development Team, Product Owner
+
+### Decision
+
+Integrate Claude AI API for step-by-step mathematical problem solving with specific prompt formatting to ensure consistent mathematical notation output. Implement MathSolverService as a singleton service to handle API calls and response parsing.
+
+### Context
+
+Users need comprehensive step-by-step mathematical problem solving assistance beyond basic graphing capabilities. The market lacks mobile apps that provide detailed mathematical explanations with proper mathematical notation. Claude AI provides superior mathematical reasoning capabilities compared to other AI services.
+
+### Alternatives Considered
+
+1. **OpenAI GPT API**
+   - Pros: Well-established API, good documentation
+   - Cons: Less specialized in mathematical reasoning, higher cost
+
+2. **Wolfram Alpha API**
+   - Pros: Specialized mathematical engine, proven accuracy
+   - Cons: Limited step-by-step explanations, expensive licensing
+
+3. **Local Mathematical Engine**
+   - Pros: No external dependencies, faster response
+   - Cons: Limited reasoning capabilities, massive development effort
+
+### Rationale
+
+Claude AI provides superior mathematical reasoning with detailed step-by-step explanations. The API integration is straightforward with URLSession. Specific prompt formatting ensures consistent mathematical notation output using Unicode symbols (√, ², ³, ln, |x|, d/dx, y', ∫, π, ∞, ±). The step-by-step format with arrow separators (mathematical_expression ← step_description) provides clear learning progression.
+
+### Consequences
+
+**Positive:**
+- Comprehensive step-by-step mathematical problem solving
+- Proper mathematical notation with Unicode symbols
+- Enhanced learning experience for students
+- Differentiation from basic graphing calculators
+- Scalable AI-powered educational features
+
+**Negative:**
+- External API dependency and potential service interruptions
+- API costs scale with usage
+- Internet connectivity requirement for AI features
+- API key security considerations
+- Potential latency for complex mathematical problems 

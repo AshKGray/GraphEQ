@@ -9,11 +9,22 @@ import SwiftUI
 
 struct InputView: View {
     @EnvironmentObject var viewModel: GraphViewModel
+    @EnvironmentObject var completionService: MathAutoCompletionService
     @State private var expressionInput: String = ""
+    @State private var showSymbolsPopup: Bool = false
+    @State private var showStructuredInput: Bool = false
     
     var body: some View {
         VStack(spacing: 8) {
-            // Equation input field
+            // Auto-completion suggestions (appears above input field)
+            if completionService.showSuggestions {
+                MathAutoCompletionView(completionService: completionService) { completion in
+                    insertCompletion(completion)
+                }
+                .padding(.horizontal, 16)
+            }
+            
+            // Equation input field with structured input toggle
             HStack {
                 Text("Equation:")
                     .font(.caption)
@@ -27,6 +38,10 @@ struct InputView: View {
                     .textFieldStyle(PlainTextFieldStyle())
                     .onChange(of: expressionInput) { oldValue, newValue in
                         print("📝 Input changed from '\(oldValue)' to '\(newValue)'")
+                        
+                        // Update auto-completion suggestions
+                        completionService.updateSuggestions(for: newValue)
+                        
                         if !viewModel.isDrawingMode {
                             // Convert to lowercase for case-insensitive function names
                             let normalizedValue = normalizeExpression(newValue)
@@ -48,12 +63,25 @@ struct InputView: View {
                     }
                     .onSubmit {
                         print("✅ TextField submitted with value: '\(expressionInput)'")
+                        completionService.clearSuggestions()
                         if !viewModel.isDrawingMode {
                             let normalizedValue = normalizeExpression(expressionInput)
                             viewModel.mathExpression = normalizedValue
                             print("🔄 Submitted expression: '\(normalizedValue)'")
                         }
                     }
+                
+                // Structured input toggle button
+                Button(action: {
+                    showStructuredInput.toggle()
+                }) {
+                    Image(systemName: "keyboard")
+                        .foregroundColor(.cyan)
+                        .font(.system(size: 16, weight: .medium))
+                        .padding(8)
+                        .background(Color.gray.opacity(0.2))
+                        .cornerRadius(6)
+                }
                 
                 Spacer()
             }
@@ -66,13 +94,58 @@ struct InputView: View {
             )
             .padding(.horizontal, 16)
             
-            // Error message
+            // Error message with SwiftMath validation
             if let errorMessage = viewModel.errorMessage {
                 Text(errorMessage)
                     .foregroundColor(.red)
                     .font(.caption2)
                     .padding(.horizontal)
+            } else if !expressionInput.isEmpty && !completionService.validateExpression(expressionInput) {
+                Text("Expression may be incomplete or invalid")
+                    .foregroundColor(.orange)
+                    .font(.caption2)
+                    .padding(.horizontal)
             }
+            
+            // Structured math input overlay
+            if showStructuredInput {
+                StructuredMathInputView(
+                    isVisible: showStructuredInput,
+                    equation: $expressionInput
+                )
+                .onChange(of: expressionInput) { _, newValue in
+                    // Update view model when structured input changes
+                    if !viewModel.isDrawingMode {
+                        let normalizedValue = normalizeExpression(newValue)
+                        viewModel.mathExpression = normalizedValue
+                    }
+                }
+            }
+        }
+    }
+    
+    private func insertCompletion(_ completion: MathCompletion) {
+        // Find the last word/prefix to replace
+        let words = expressionInput.components(separatedBy: CharacterSet.alphanumerics.inverted)
+        if let lastWord = words.last, !lastWord.isEmpty {
+            // Replace the last word with the completion
+            let range = expressionInput.range(of: lastWord, options: .backwards)
+            if let range = range {
+                expressionInput.replaceSubrange(range, with: completion.insertion)
+            } else {
+                expressionInput += completion.insertion
+            }
+        } else {
+            expressionInput += completion.insertion
+        }
+        
+        // Clear suggestions after insertion
+        completionService.clearSuggestions()
+        
+        // Update the view model
+        if !viewModel.isDrawingMode {
+            let normalizedValue = normalizeExpression(expressionInput)
+            viewModel.mathExpression = normalizedValue
         }
     }
     

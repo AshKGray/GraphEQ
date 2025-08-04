@@ -9,7 +9,6 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject var viewModel: GraphViewModel
-    @State private var showAIAssistant: Bool = false
     @State private var showMathSolver: Bool = false
     
     var body: some View {
@@ -39,9 +38,6 @@ struct ContentView: View {
                 .frame(height: 300) // Increased height to ensure all content is visible
             }
         }
-        .sheet(isPresented: $showAIAssistant) {
-            AIAssistantView()
-        }
         .sheet(isPresented: $showMathSolver) {
             MathSolverView()
         }
@@ -59,11 +55,18 @@ struct ContentView: View {
             
             Spacer()
             
-            HStack(spacing: 12) {
+            HStack(spacing: 8) {
                 Button("Clear") {
                     viewModel.resetView()
                 }
                 .buttonStyle(HeaderButtonStyle())
+                
+                if viewModel.is3DMode {
+                    Button("Examples") {
+                        viewModel.setRandomExample3DExpression()
+                    }
+                    .buttonStyle(HeaderButtonStyle())
+                }
                 
                 Button("Save") {
                     // TODO: Implement save functionality
@@ -72,11 +75,6 @@ struct ContentView: View {
                 
                 Button("Math") {
                     showMathSolver = true
-                }
-                .buttonStyle(HeaderButtonStyle())
-                
-                Button("AI") {
-                    showAIAssistant = true
                 }
                 .buttonStyle(HeaderButtonStyle())
             }
@@ -103,9 +101,14 @@ struct ContentView: View {
                         .stroke(Color(red: 0.267, green: 0.267, blue: 0.267), lineWidth: 2)
                 )
             
-            // Graph content
-            GraphView()
-                .environmentObject(viewModel)
+            // Graph content - conditionally show 2D or 3D view
+            if viewModel.is3DMode {
+                Graph3DView()
+                    .environmentObject(viewModel)
+            } else {
+                GraphView()
+                    .environmentObject(viewModel)
+            }
             
             // Mode tabs overlay
             VStack {
@@ -362,7 +365,7 @@ struct HeaderButtonStyle: ButtonStyle {
             .font(.caption)
             .fontWeight(.semibold)
             .foregroundColor(configuration.isPressed ? .black : .orange)
-            .padding(.horizontal, 12)
+            .padding(.horizontal, 8)
             .padding(.vertical, 8)
             .background(configuration.isPressed ? .orange : Color(red: 0.133, green: 0.133, blue: 0.133))
             .overlay(

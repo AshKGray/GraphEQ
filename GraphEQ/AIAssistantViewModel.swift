@@ -8,21 +8,49 @@
 import Foundation
 import SwiftUI
 
-class AIAssistantViewModel: ObservableObject {
+@MainActor
+final class AIAssistantViewModel: ObservableObject {
     @Published var solutions: [SolutionStep] = []
     @Published var generalQuestion: String = ""
     @Published var generalAnswer: String = ""
     @Published var isProcessing: Bool = false
     
     func solveProblem(_ problem: String) {
-        isProcessing = true
-        
-        // Simulate AI processing delay
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            self.generateStepByStepSolution(for: problem)
+    isProcessing = true
+    solutions = [] // Clear old solutions
+    
+    MathSolverService.shared.solveMathProblem(problem) { result in
+        DispatchQueue.main.async {
             self.isProcessing = false
+            switch result {
+            case .success(let solution):
+                self.parseAISolution(solution)
+            case .failure(let error):
+                // Handle error
+                self.solutions = [SolutionStep(description: "Error: \(error.localizedDescription)", result: nil, explanation: nil)]
+            }
         }
     }
+}
+
+private func parseAISolution(_ solution: String) {
+    // Parse the AI solution into your SolutionStep format
+    let lines = solution.components(separatedBy: .newlines)
+    var steps: [SolutionStep] = []
+    
+    for line in lines {
+        if line.contains("←") {
+            let parts = line.components(separatedBy: "←")
+            if parts.count == 2 {
+                let expression = parts[0].trimmingCharacters(in: .whitespaces)
+                let description = parts[1].trimmingCharacters(in: .whitespaces)
+                steps.append(SolutionStep(description: description, result: expression, explanation: nil))
+            }
+        }
+    }
+    
+    self.solutions = steps
+}
     
     func askGeneralQuestion() {
         isProcessing = true

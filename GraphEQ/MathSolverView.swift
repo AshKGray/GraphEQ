@@ -1,10 +1,59 @@
 import SwiftUI
 
+// MARK: - Enhanced Mathematical Notation Formatter
+struct EnhancedMathNotationFormatter {
+    static func formatExpression(_ expression: String) -> String {
+        // Use manual formatting for mathematical expressions
+        return formatManually(expression)
+    }
+    
+    private static func formatManually(_ expression: String) -> String {
+        var formatted = expression
+        
+        // Replace common mathematical symbols with proper Unicode
+        let replacements = [
+            "sqrt": "√",
+            "cbrt": "∛",
+            "infinity": "∞",
+            "pi": "π",
+            "theta": "θ",
+            "alpha": "α",
+            "beta": "β",
+            "gamma": "γ",
+            "delta": "δ",
+            "partial": "∂",
+            "sum": "∑",
+            "product": "∏",
+            "integral": "∫",
+            "leq": "≤",
+            "geq": "≥",
+            "neq": "≠",
+            "approx": "≈",
+            "plusminus": "±",
+            "times": "×",
+            "div": "÷"
+        ]
+        
+        for (key, value) in replacements {
+            formatted = formatted.replacingOccurrences(of: key, with: value)
+        }
+        
+        return formatted.trimmingCharacters(in: .whitespaces)
+    }
+    
+    static func validateExpression(_ expression: String) -> Bool {
+        // Basic validation - check if expression contains valid mathematical characters
+        let validChars = "0123456789+-*/()^=<>≤≥≠πθαβγδ∞∫∑∂√∛abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ ,."
+        return expression.allSatisfy { validChars.contains($0) || $0.isWhitespace }
+    }
+}
+
 struct MathSolverView: View {
-    @State private var currentProblem = "" // Single input field that never gets cleared
+    @State private var currentProblem = ""
     @State private var isLoading = false
     @State private var chatHistory: [ChatMessage] = []
     @State private var showInputAfterSolution = false
+    @EnvironmentObject var completionService: MathAutoCompletionService
     
     var body: some View {
         ZStack {
@@ -42,7 +91,7 @@ struct MathSolverView: View {
                 .font(.title2)
                 .fontWeight(.bold)
                 .foregroundColor(.cyan)
-                .glow(color: .cyan, radius: 2)
+                .shadow(color: .cyan, radius: 2)
             
             Spacer()
             
@@ -71,7 +120,7 @@ struct MathSolverView: View {
         }
     }
     
-    // MARK: - Initial Input View
+    // MARK: - Initial Input View (FIXED)
     private var initialInputView: some View {
         VStack(spacing: 20) {
             Spacer()
@@ -80,57 +129,93 @@ struct MathSolverView: View {
                 .font(.title2)
                 .fontWeight(.bold)
                 .foregroundColor(.cyan)
-                .glow(color: .cyan, radius: 2)
+                .shadow(color: .cyan, radius: 2)
             
             VStack(spacing: 16) {
-                // Quick symbols row
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 12) {
-                        ForEach(quickSymbols, id: \.self) { symbol in
-                            Button(symbol) {
-                                currentProblem += symbol
-                            }
-                            .font(.title2)
-                            .foregroundColor(.cyan)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Color.gray.opacity(0.2))
-                            .cornerRadius(8)
-                        }
+                // Auto-completion suggestions
+                if completionService.showSuggestions {
+                    MathAutoCompletionView(completionService: completionService) { completion in
+                        insertCompletion(completion)
                     }
                     .padding(.horizontal, 16)
                 }
                 
-                // Problem input field
-                TextField("Enter a math problem to solve step by step...", text: $currentProblem, axis: .vertical)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .foregroundColor(.white)
-                    .background(Color.gray.opacity(0.2))
-                    .cornerRadius(12)
-                    .lineLimit(1...4)
+                // Quick symbols row - FIXED scrolling
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(quickSymbols, id: \.self) { symbol in
+                            Button(symbol) {
+                                currentProblem += symbol
+                                completionService.updateSuggestions(for: currentProblem)
+                            }
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.white)  // WHITE text for visibility
+                            .frame(width: 40, height: 35)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(Color.gray.opacity(0.3))
+                                    .stroke(Color.gray.opacity(0.5), lineWidth: 1)
+                            )
+                        }
+                    }
                     .padding(.horizontal, 16)
+                }
+                .frame(height: 50)
+                
+                // Problem input field with SwiftMath validation
+                VStack(alignment: .leading, spacing: 4) {
+                    TextField("Enter math problem like: x^2 + 5x - 6 = 0", text: $currentProblem)
+                        .font(.system(size: 18, weight: .medium))
+                        .foregroundColor(.white)  // WHITE text
+                        .padding(16)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color.gray.opacity(0.2))
+                                .stroke(Color.cyan.opacity(0.5), lineWidth: 1)
+                        )
+                        .lineLimit(1...4)
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.never)
+                        .onChange(of: currentProblem) { oldValue, newValue in
+                            completionService.updateSuggestions(for: newValue)
+                        }
+                        .onSubmit {
+                            completionService.clearSuggestions()
+                        }
+                    
+                    // Expression validation feedback
+                    if !currentProblem.isEmpty && !EnhancedMathNotationFormatter.validateExpression(currentProblem) {
+                        Text("Expression may be incomplete or invalid")
+                            .font(.caption2)
+                            .foregroundColor(.orange)
+                            .padding(.horizontal, 4)
+                    }
+                }
+                .padding(.horizontal, 16)
                 
                 // Solve button
                 Button(action: solveProblem) {
-                    if isLoading {
-                        HStack {
+                    HStack {
+                        if isLoading {
                             ProgressView()
                                 .progressViewStyle(CircularProgressViewStyle(tint: .black))
                                 .scaleEffect(0.8)
                             Text("Solving...")
                                 .foregroundColor(.black)
                                 .fontWeight(.semibold)
+                        } else {
+                            Text("Solve Step by Step")
+                                .foregroundColor(.black)
+                                .fontWeight(.semibold)
                         }
-                    } else {
-                        Text("Solve Step by Step")
-                            .foregroundColor(.black)
-                            .fontWeight(.semibold)
                     }
+                    .frame(height: 50)
+                    .frame(maxWidth: .infinity)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(currentProblem.isEmpty || isLoading ? Color.gray : Color.cyan)
+                    )
                 }
-                .frame(height: 50)
-                .frame(maxWidth: .infinity)
-                .background(isLoading ? Color.gray : Color.cyan)
-                .cornerRadius(12)
                 .disabled(currentProblem.isEmpty || isLoading)
                 .padding(.horizontal, 16)
             }
@@ -154,6 +239,7 @@ struct MathSolverView: View {
                                 Spacer()
                                 VStack(alignment: .trailing, spacing: 4) {
                                     Text(message.content)
+                                        .font(.system(size: 16, weight: .medium))
                                         .foregroundColor(.black)
                                         .padding(.horizontal, 16)
                                         .padding(.vertical, 12)
@@ -185,8 +271,11 @@ struct MathSolverView: View {
                                 }
                                 .padding(.horizontal, 16)
                                 .padding(.vertical, 12)
-                                .background(Color.gray.opacity(0.2))
-                                .cornerRadius(18)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 18)
+                                        .fill(Color.gray.opacity(0.2))
+                                        .stroke(Color.cyan.opacity(0.3), lineWidth: 1)
+                                )
                                 
                                 Spacer()
                             }
@@ -196,7 +285,7 @@ struct MathSolverView: View {
                 }
                 .padding(.vertical, 8)
             }
-            .onChange(of: chatHistory.count) { _ in
+            .onChange(of: chatHistory.count) { oldValue, newValue in
                 if let lastIndex = chatHistory.indices.last {
                     withAnimation(.easeInOut(duration: 0.3)) {
                         proxy.scrollTo(lastIndex, anchor: .bottom)
@@ -206,35 +295,28 @@ struct MathSolverView: View {
         }
     }
     
-    // MARK: - Step by Step Solution View
+    // MARK: - Step by Step Solution View (SIDE-BY-SIDE LAYOUT)
     private func stepByStepSolutionView(_ solution: String) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 6) {
             let steps = parseSolutionSteps(solution)
             
             ForEach(steps.indices, id: \.self) { index in
                 let step = steps[index]
-                HStack(alignment: .top, spacing: 12) {
-                    // Mathematical expression (left side)
-                    Text(step.expression)
-                        .font(.system(.body, design: .monospaced))
-                        .foregroundColor(.green)
-                        .multilineTextAlignment(.leading)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    
-                    // Arrow and description (right side)
-                    HStack(spacing: 4) {
-                        Text("←")
-                            .foregroundColor(.gray)
-                            .font(.caption)
-                        
-                        Text(step.description)
-                            .font(.caption)
-                            .foregroundColor(.gray)
-                            .multilineTextAlignment(.trailing)
-                    }
-                    .frame(width: 120, alignment: .trailing)
-                }
-                .padding(.vertical, 2)
+                
+                // Full-width mathematical expression with enhanced formatting
+                Text(EnhancedMathNotationFormatter.formatExpression(step.expression))
+                    .font(.system(size: 16, weight: .medium, design: .monospaced))
+                    .foregroundColor(.green)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .multilineTextAlignment(.leading)
+                    .lineLimit(nil)
+                .padding(.vertical, 10)
+                .padding(.horizontal, 12)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color.black.opacity(0.3))
+                        .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+                )
             }
         }
     }
@@ -255,6 +337,13 @@ struct MathSolverView: View {
                     if !expression.isEmpty && !description.isEmpty {
                         steps.append((expression: expression, description: description))
                     }
+                } else if let arrowRange = trimmedLine.range(of: "←") {
+                    let expression = String(trimmedLine[..<arrowRange.lowerBound]).trimmingCharacters(in: .whitespaces)
+                    let description = String(trimmedLine[arrowRange.upperBound...]).trimmingCharacters(in: .whitespaces)
+                    
+                    if !expression.isEmpty && !description.isEmpty {
+                        steps.append((expression: expression, description: description))
+                    }
                 } else {
                     // If no arrow found, treat as a single step
                     steps.append((expression: trimmedLine, description: "step"))
@@ -265,41 +354,65 @@ struct MathSolverView: View {
         return steps
     }
     
-    // MARK: - Bottom Input View (always shown after first solution)
+    // MARK: - Bottom Input View with Auto-Completion
     private var bottomInputView: some View {
-        VStack(spacing: 0) {
-            // Quick symbols row
+        VStack(spacing: 8) {
+            // Auto-completion suggestions for bottom input
+            if completionService.showSuggestions {
+                MathAutoCompletionView(completionService: completionService) { completion in
+                    insertCompletion(completion)
+                }
+                .padding(.horizontal, 16)
+            }
+            
+            // Quick symbols row - FIXED
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
+                HStack(spacing: 8) {
                     ForEach(quickSymbols, id: \.self) { symbol in
                         Button(symbol) {
                             currentProblem += symbol
+                            completionService.updateSuggestions(for: currentProblem)
                         }
-                        .font(.title2)
-                        .foregroundColor(.cyan)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Color.gray.opacity(0.2))
-                        .cornerRadius(8)
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.white)  // WHITE text
+                        .frame(width: 35, height: 30)
+                        .background(
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(Color.gray.opacity(0.3))
+                                .stroke(Color.gray.opacity(0.5), lineWidth: 1)
+                        )
                     }
                 }
                 .padding(.horizontal, 16)
             }
-            .padding(.vertical, 8)
+            .frame(height: 40)
             
-            // Input field and send button
-            HStack(spacing: 12) {
-                TextField("Edit problem and solve again...", text: $currentProblem, axis: .vertical)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .foregroundColor(.white)
-                    .background(Color.gray.opacity(0.2))
-                    .cornerRadius(12)
-                    .lineLimit(1...4)
+            // Input field and send button with validation
+            VStack(spacing: 4) {
+                HStack(spacing: 12) {
+                    TextField("Edit problem and solve again...", text: $currentProblem)
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.white)  // WHITE text
+                        .padding(12)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color.gray.opacity(0.2))
+                                .stroke(Color.cyan.opacity(0.5), lineWidth: 1)
+                        )
+                        .lineLimit(1...4)
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.never)
+                        .onChange(of: currentProblem) { oldValue, newValue in
+                            completionService.updateSuggestions(for: newValue)
+                        }
+                        .onSubmit {
+                            completionService.clearSuggestions()
+                        }
                 
                 Button(action: solveProblem) {
                     if isLoading {
                         ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: .cyan))
+                            .progressViewStyle(CircularProgressViewStyle(tint: .black))
                             .scaleEffect(0.8)
                     } else {
                         Text("Solve")
@@ -308,24 +421,65 @@ struct MathSolverView: View {
                     }
                 }
                 .frame(width: 60, height: 44)
-                .background(isLoading ? Color.gray : Color.cyan)
-                .cornerRadius(12)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(currentProblem.isEmpty || isLoading ? Color.gray : Color.cyan)
+                )
                 .disabled(currentProblem.isEmpty || isLoading)
             }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 16)
+            
+            // Expression validation feedback for bottom input  
+            if !currentProblem.isEmpty && !EnhancedMathNotationFormatter.validateExpression(currentProblem) {
+                HStack {
+                    Text("Expression may be incomplete or invalid")
+                        .font(.caption2)
+                        .foregroundColor(.orange)
+                        .padding(.horizontal, 4)
+                    Spacer()
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.bottom, 16)
         }
         .background(Color.black)
     }
     
-    // MARK: - Quick Symbols
+    // MARK: - Quick Symbols (REDUCED for better fit)
     private let quickSymbols = [
-        "√", "²", "³", "⁴", "⁵", "×", "÷", "π", "∞", "∫", "d/dx", "ln", "sin", "cos", "tan", "(", ")", "+", "-", "="
+        "√", "²", "³", "×", "÷", "π", "∫", "ln", "sin", "cos", "tan",
+        "(", ")", "+", "-", "=", "|", "y'", "∂", "±", "≤", "≥"
     ]
     
-    // MARK: - Solve Problem (single function for both initial and bottom inputs)
+    // MARK: - Insert Completion
+    private func insertCompletion(_ completion: MathCompletion) {
+        // Find the last word/prefix to replace
+        let words = currentProblem.components(separatedBy: CharacterSet.alphanumerics.inverted)
+        if let lastWord = words.last, !lastWord.isEmpty {
+            // Replace the last word with the completion
+            let range = currentProblem.range(of: lastWord, options: .backwards)
+            if let range = range {
+                currentProblem.replaceSubrange(range, with: completion.insertion)
+            } else {
+                currentProblem += completion.insertion
+            }
+        } else {
+            currentProblem += completion.insertion
+        }
+        
+        // Clear suggestions after insertion
+        completionService.clearSuggestions()
+    }
+    
+    // MARK: - Solve Problem
     private func solveProblem() {
         guard !currentProblem.isEmpty else { return }
+        
+        // Validate expression with Expression library before sending to AI
+        if !EnhancedMathNotationFormatter.validateExpression(currentProblem) {
+            // Show warning but still allow sending to AI for better error handling
+            print("⚠️ Expression validation warning: \(currentProblem)")
+        }
         
         let userMessage = ChatMessage(
             content: currentProblem,
@@ -336,6 +490,9 @@ struct MathSolverView: View {
         chatHistory.append(userMessage)
         
         isLoading = true
+        
+        // Clear auto-completion suggestions when solving
+        completionService.clearSuggestions()
         
         MathSolverService.shared.solveMathProblem(currentProblem) { result in
             DispatchQueue.main.async {
@@ -350,7 +507,6 @@ struct MathSolverView: View {
                     )
                     chatHistory.append(aiMessage)
                     
-                    // Show input after solution is displayed (only once)
                     if !showInputAfterSolution {
                         withAnimation(.easeInOut(duration: 0.5)) {
                             showInputAfterSolution = true
@@ -365,7 +521,6 @@ struct MathSolverView: View {
                     )
                     chatHistory.append(errorMessage)
                     
-                    // Show input even if there's an error (only once)
                     if !showInputAfterSolution {
                         withAnimation(.easeInOut(duration: 0.5)) {
                             showInputAfterSolution = true
@@ -389,15 +544,6 @@ struct ChatMessage {
     let content: String
     let isUser: Bool
     let timestamp: String
-}
-
-// MARK: - Glow Modifier
-extension View {
-    func glow(color: Color, radius: CGFloat) -> some View {
-        self
-            .shadow(color: color, radius: radius)
-            .shadow(color: color, radius: radius)
-    }
 }
 
 #Preview {

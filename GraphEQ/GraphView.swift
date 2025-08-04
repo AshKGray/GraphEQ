@@ -27,47 +27,34 @@ struct GraphView: View {
             Color.black
                 .contentShape(Rectangle()) // Make the whole area tappable/draggable
                 .gesture(
-                    // MARK: - Drawing Gesture
+                    // MARK: - Drawing or Panning Gesture
                     DragGesture(minimumDistance: 0) // Allows for single taps to register too
                         .onChanged { value in
-                            print("🎯 Drag gesture changed - isDrawingMode: \(viewModel.isDrawingMode)")
                             if viewModel.isDrawingMode {
-                                // Add new point to drawnPoints, converting from view coordinates to graph coordinates
+                                // In drawing mode, append point; converted to graph coordinates
                                 let graphPoint = viewToGraph(point: value.location, in: viewSize)
-                                print("✏️ Drawing point at graph coordinates: \(graphPoint)")
+                                // Avoid adding duplicate points if too close
                                 if let lastPoint = viewModel.drawnPoints.last,
                                    distance(from: lastPoint, to: graphPoint) < 0.1 {
-                                    // Avoid adding duplicate points if very close
-                                    print("⏭️ Skipping duplicate point")
                                     return
                                 }
                                 viewModel.drawnPoints.append(graphPoint)
-                                print("✅ Added point. Total drawn points: \(viewModel.drawnPoints.count)")
-                                
-                                // Trigger real-time equation generation
-                                if viewModel.drawnPoints.count > 2 {
-                                    viewModel.fitCurveToDrawnPoints()
-                                }
+                                // Real-time fitting is handled by didSet in viewModel.drawnPoints
                             } else {
-                                // Panning gesture for typing mode
-                                print("🖱️ Panning gesture")
+                                // In typing/panning mode, update translation for panning
                                 currentTranslation = value.translation
                                 viewModel.translation = currentTranslation
                                 viewModel.updateGraphRanges(viewSize: viewSize)
                             }
                         }
                         .onEnded { value in
-                            print("🎯 Drag gesture ended - isDrawingMode: \(viewModel.isDrawingMode)")
                             if viewModel.isDrawingMode {
-                                // When drawing ends, finalize the curve fitting
-                                print("✏️ Drawing ended with \(viewModel.drawnPoints.count) points")
-                                if viewModel.drawnPoints.count > 2 {
-                                    viewModel.fitCurveToDrawnPoints()
-                                }
+                                // Drawing ended, final curve fitting handled by viewModel observer
+                                // No additional action needed here
                             } else {
-                                // When panning ends, reset currentTranslation and commit to viewModel.translation
+                                // Panning ended: reset currentTranslation and commit final translation
                                 currentTranslation = .zero
-                                viewModel.translation = value.translation // Store final translation
+                                viewModel.translation = value.translation
                                 viewModel.updateGraphRanges(viewSize: viewSize)
                             }
                         }
@@ -115,8 +102,6 @@ struct GraphView: View {
                     let firstPoint = graphToView(point: viewModel.dataPoints[0], in: size)
                     path.move(to: firstPoint)
                     
-
-
                     // Add lines for the rest of the points
                     for i in 1..<viewModel.dataPoints.count {
                         let point = graphToView(point: viewModel.dataPoints[i], in: size)

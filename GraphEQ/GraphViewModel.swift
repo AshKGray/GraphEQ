@@ -7,7 +7,8 @@ import Expression // <-- Ensure this import is present after adding the package
 
 /// GraphViewModel manages the state and logic for the graph and input.
 /// It acts as the bridge between the View and the underlying data/logic.
-class GraphViewModel: ObservableObject {
+@MainActor
+final class GraphViewModel: ObservableObject {
     // MARK: - Published Properties
 
     /// The mathematical expression entered by the user.
@@ -52,13 +53,22 @@ class GraphViewModel: ObservableObject {
             if is3DMode {
                 // Switch to 3D mode - clear 2D data and prepare for 3D
                 dataPoints = []
-                // TODO: Initialize 3D data structures
+                // Set a default 3D expression if none exists
+                if mathExpression.isEmpty || !mathExpression.contains("y") {
+                    // Provide an example of explicit form
+                    mathExpression = "sin(x) * cos(y)"
+                }
+                parseAndPlotExpression()
             } else {
-                // Switch back to 2D mode
+                // Switch back to 2D mode - clear 3D data
+                dataPoints3D = []
+                // Set a default 2D expression if none exists
+                if mathExpression.isEmpty {
+                    mathExpression = "sin(x)"
+                }
                 parseAndPlotExpression()
             }
         }
-
     }
 
     /// Stores the raw points captured during a freehand drawing gesture.
@@ -313,27 +323,135 @@ class GraphViewModel: ObservableObject {
             dataPoints3D = []
             return
         }
-        
-        // TODO: Implement 3D expression parsing
-        // For now, create a simple surface for testing
+
+        print("🔍 Parsing 3D expression: '\(mathExpression)'")
         var points3D: [CGPoint3D] = []
-        let gridSize = 20
+        
+        // Determine if this is an implicit equation (contains =) or explicit (z = f(x,y))
+        let isImplicit = mathExpression.contains("=")
+        
+        if isImplicit {
+            points3D = parseImplicit3DExpression()
+        } else {
+            points3D = parseExplicit3DExpression()
+        }
+        
+        print("✅ Generated \(points3D.count) valid 3D points")
+        dataPoints3D = points3D
+        
+        // If no valid points were generated, show an error
+        if points3D.isEmpty {
+            errorMessage = "No valid 3D points generated. Check your expression."
+            print("⚠️ No valid 3D points generated for expression: '\(mathExpression)'")
+        }
+    }
+    
+    /// Parses explicit 3D expressions in the form z = f(x,y)
+    private func parseExplicit3DExpression() -> [CGPoint3D] {
+        var points3D: [CGPoint3D] = []
+        
+        // Determine grid size based on current view range and performance considerations
+        let gridSize = 40 // Increased for better detail
         let xStep = (xRange.upperBound - xRange.lowerBound) / CGFloat(gridSize - 1)
         let yStep = (yRange.upperBound - yRange.lowerBound) / CGFloat(gridSize - 1)
+        
+        print("📊 3D plotting grid: \(gridSize)x\(gridSize), x-step: \(xStep), y-step: \(yStep)")
+        print("📊 X range: \(xRange.lowerBound) to \(xRange.upperBound)")
+        print("📊 Y range: \(yRange.lowerBound) to \(yRange.upperBound)")
+        
+        var validPoints = 0
+        var totalPoints = 0
         
         for i in 0..<gridSize {
             for j in 0..<gridSize {
                 let x = xRange.lowerBound + CGFloat(i) * xStep
                 let y = yRange.lowerBound + CGFloat(j) * yStep
+                totalPoints += 1
                 
-                // Simple test surface: z = x + y
-                let z = x + y
-                
-                points3D.append(CGPoint3D(x: x, y: y, z: z))
+                do {
+                    // Create expression with both x and y values as constants
+                    let expression = Expression(mathExpression, constants: ["x": Double(x), "y": Double(y)])
+                    let z = try expression.evaluate()
+                    
+                    if z.isFinite && !z.isNaN && abs(z) < 1000 { // Add reasonable bounds check
+                        points3D.append(CGPoint3D(x: x, y: y, z: CGFloat(z)))
+                        validPoints += 1
+                    }
+                } catch {
+                    print("❌ Error evaluating 3D expression at x=\(x), y=\(y): \(error)")
+                    // Skip this point if evaluation fails
+                    continue
+                }
             }
         }
         
-        dataPoints3D = points3D
+        print("✅ Generated \(validPoints)/\(totalPoints) valid 3D points")
+        return points3D
+    }
+    
+    /// Parses implicit 3D expressions in the form f(x,y,z) = 0
+    private func parseImplicit3DExpression() -> [CGPoint3D] {
+        var points3D: [CGPoint3D] = []
+        
+        // Parse the implicit equation: f(x,y,z) = 0
+        let components = mathExpression.components(separatedBy: "=")
+        guard components.count == 2 else {
+            errorMessage = "Invalid implicit equation format. Use: f(x,y,z) = 0"
+            return []
+        }
+        
+        let leftSide = components[0].trimmingCharacters(in: .whitespaces)
+        let rightSide = components[1].trimmingCharacters(in: .whitespaces)
+        
+        // For now, assume right side is 0 (f(x,y,z) = 0)
+        // TODO: Support other constants like f(x,y,z) = k
+        guard rightSide == "0" else {
+            errorMessage = "Currently only supports implicit equations in form f(x,y,z) = 0"
+            return []
+        }
+        
+        // Determine grid size for implicit surface sampling
+        let gridSize = 20 // Smaller grid for performance with implicit equations
+        let xStep = (xRange.upperBound - xRange.lowerBound) / CGFloat(gridSize - 1)
+        let yStep = (yRange.upperBound - yRange.lowerBound) / CGFloat(gridSize - 1)
+        let zRange: ClosedRange<CGFloat> = -10.0...10.0 // Expanded Z range for implicit equations
+        let zStep = (zRange.upperBound - zRange.lowerBound) / CGFloat(gridSize - 1)
+        
+        print("📊 Implicit 3D plotting grid: \(gridSize)x\(gridSize)x\(gridSize)")
+        print("📊 Z range: \(zRange.lowerBound) to \(zRange.upperBound)")
+        
+        var validPoints = 0
+        var totalPoints = 0
+        
+        // Sample the implicit surface using marching cubes-like approach
+        for i in 0..<gridSize {
+            for j in 0..<gridSize {
+                for k in 0..<gridSize {
+                    let x = xRange.lowerBound + CGFloat(i) * xStep
+                    let y = yRange.lowerBound + CGFloat(j) * yStep
+                    let z = zRange.lowerBound + CGFloat(k) * zStep
+                    totalPoints += 1
+                    
+                    do {
+                        // Evaluate the implicit function f(x,y,z)
+                        let expression = Expression(leftSide, constants: ["x": Double(x), "y": Double(y), "z": Double(z)])
+                        let value = try expression.evaluate()
+                        
+                        // Check if this point is close to the surface (f(x,y,z) ≈ 0)
+                        if abs(value) < 1.0 && value.isFinite && !value.isNaN { // Increased threshold for surface detection
+                            points3D.append(CGPoint3D(x: x, y: y, z: z))
+                            validPoints += 1
+                        }
+                    } catch {
+                        // Skip this point if evaluation fails
+                        continue
+                    }
+                }
+            }
+        }
+        
+        print("✅ Generated \(validPoints)/\(totalPoints) valid implicit 3D points")
+        return points3D
     }
     
     /// Evaluates mathematical expressions using the Expression library
@@ -390,6 +508,35 @@ class GraphViewModel: ObservableObject {
             mathExpression = ""
             dataPoints = []
         }
+    }
+
+    /// Provides example 3D expressions for users to try
+    func getExample3DExpressions() -> [String] {
+        return [
+            // Explicit forms (z = f(x,y)) - these should work well
+            "sin(x) * cos(y)",
+            "x^2 + y^2",
+            "sin(sqrt(x^2 + y^2))",
+            "exp(-(x^2 + y^2)/4)",
+            "x * y / 2",
+            "sin(x) + cos(y)",
+            "sqrt(x^2 + y^2)",
+            
+            // Implicit forms (f(x,y,z) = 0) - these should work well
+            "x^2 + y^2 + z^2 - 9",
+            "x^2 + y^2 - z^2",
+            "x^2 + y^2 - z",
+            "x^2 + y^2 + z^2 - 4",
+            "x^2 + y^2 - 1"
+        ]
+    }
+    
+    /// Sets a random example 3D expression
+    func setRandomExample3DExpression() {
+        let examples = getExample3DExpressions()
+        let randomIndex = Int.random(in: 0..<examples.count)
+        mathExpression = examples[randomIndex]
+        parseAndPlotExpression()
     }
 }
 
